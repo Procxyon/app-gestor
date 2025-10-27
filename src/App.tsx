@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Inventario from './components/Inventario'
 import Prestamos from './components/Prestamos'
 
