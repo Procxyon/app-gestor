@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+// Nuevas importaciones
+import { useState, useEffect, useMemo } from 'react'
 import type { FormEvent } from 'react'
+import Fuse from 'fuse.js' // <-- Importamos Fuse.js
 
-// (La interfaz Prestamo no cambia)
+// --- INTERFACES ---
 interface Prestamo {
   id: number;
   nombre_persona: string;
@@ -10,25 +12,44 @@ interface Prestamo {
   nombre_equipo: string; 
 }
 
-// (La interfaz Producto no cambia)
 interface Producto {
   id: number;
   nombre_equipo: string;
 }
+
+// Opciones para la búsqueda difusa
+const fuseOptions = {
+  keys: ['nombre_equipo'],
+  threshold: 0.4,
+  includeScore: true
+};
 
 interface PrestamosProps {
   apiUrl: string;
 }
 
 function Prestamos({ apiUrl }: PrestamosProps) {
+  // --- ESTADO PARA LA LISTA (HISTORIAL) ---
   const [prestamos, setPrestamos] = useState<Prestamo[]>([])
   const [loading, setLoading] = useState(true)
-  const [productos, setProductos] = useState<Producto[]>([])
-  const [productoId, setProductoId] = useState('')
-  const [nombrePersona, setNombrePersona] = useState('')
-  const [enviando, setEnviando] = useState(false)
 
-  // (fetchPrestamos y fetchProductos no cambian)
+  // --- ESTADO PARA EL NUEVO FORMULARIO ---
+  const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([])
+  const [listaSolicitud, setListaSolicitud] = useState<Producto[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState<Producto[]>([])
+  const [nombrePersona, setNombrePersona] = useState('')
+  const [numeroControl, setNumeroControl] = useState('')
+  const [integrantes, setIntegrantes] = useState(1)
+  const [enviando, setEnviando] = useState(false)
+  
+  // --- ¡NUEVA FEATURE! ---
+  const [isMaestro, setIsMaestro] = useState(false)
+
+  // Instancia de Fuse para la búsqueda
+  const fuse = useMemo(() => new Fuse(todosLosProductos, fuseOptions), [todosLosProductos])
+
+  // --- FUNCIONES DEL HISTORIAL (Sin cambios) ---
   const fetchPrestamos = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/prestamos`)
@@ -39,17 +60,36 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     }
   }
 
+  const handleDevolucion = async (prestamoId: number) => {
+    if (!window.confirm('¿Estás seguro de que quieres marcar este préstamo como devuelto?')) {
+      return
+    }
+    try {
+      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, {
+        method: 'PUT',
+      })
+      if (!response.ok) throw new Error('Error al registrar la devolución')
+      alert('¡Devolución registrada con éxito!')
+      fetchPrestamos() 
+    } catch (error) {
+      console.error('Error al devolver:', error)
+      if (error instanceof Error) alert(`Error: ${error.message}`)
+      else alert('Ocurrió un error desconocido')
+    }
+  }
+
+  // --- FUNCIONES DEL FORMULARIO (Nuevas/Actualizadas) ---
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/inventario`)
       const data = await response.json()
-      setProductos(data)
+      setTodosLosProductos(data) // Almacena todos los productos para la búsqueda
     } catch (error) {
       console.error('Error al cargar productos:', error)
     }
   }
 
-  // (useEffect no cambia)
+  // Carga TODOS los datos (historial y productos) al inicio
   useEffect(() => {
     const cargarDatos = async () => {
       setLoading(true)
@@ -62,28 +102,89 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     cargarDatos()
   }, []) 
 
-  // (handleSubmit no cambia)
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault() 
-    if (!productoId || !nombrePersona) {
-      alert('Por favor, selecciona un producto e ingresa un nombre.')
+  // Búsqueda
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value
+    setSearchTerm(newSearchTerm)
+    if (newSearchTerm.trim() === '') {
+      setSearchResults([])
       return
     }
+    const results = fuse.search(newSearchTerm).map(result => result.item)
+    setSearchResults(results.slice(0, 5)) 
+  }
+
+  // Añadir a la lista
+  const handleAddItem = (producto: Producto) => {
+    if (!listaSolicitud.find(item => item.id === producto.id)) {
+      setListaSolicitud([...listaSolicitud, producto])
+    }
+    setSearchTerm('')
+    setSearchResults([])
+  }
+
+  // Quitar de la lista
+  const handleRemoveItem = (productoId: number) => {
+    setListaSolicitud(listaSolicitud.filter(item => item.id !== productoId))
+  }
+
+  // ¡NUEVO SUBMIT! (Fusiona todo)
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault() 
+    
+    if (listaSolicitud.length === 0) {
+      alert('Debes añadir al menos un equipo a tu solicitud.')
+      return
+    }
+    
+    // --- LÓGICA DE MAESTRO ---
+    if (!isMaestro && !numeroControl.trim()) {
+      alert('El Número de Control es obligatorio para alumnos.')
+      return
+    }
+
+    if (!nombrePersona.trim() || !integrantes) {
+      alert('Por favor, llena el nombre y el número de integrantes.')
+      return
+    }
+    
     setEnviando(true)
-    try {
-      const response = await fetch(`${apiUrl}/api/prestamos`, {
+
+    const solicitudes = listaSolicitud.map(producto => {
+      return fetch(`${apiUrl}/api/prestamos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          producto_id: parseInt(productoId), 
+          producto_id: producto.id, 
           nombre_persona: nombrePersona,
+          // --- LÓGICA DE MAESTRO ---
+          // Si es maestro, envía null. Si no, envía el número de control.
+          numero_de_control: isMaestro ? null : numeroControl,
+          integrantes: integrantes
         }),
       })
-      if (!response.ok) throw new Error('Error al registrar el préstamo')
-      alert('¡Préstamo registrado con éxito!')
-      setProductoId('') 
-      setNombrePersona('') 
-      fetchPrestamos() // Recarga la lista de préstamos
+    })
+
+    try {
+      const responses = await Promise.all(solicitudes)
+      const algunaFallo = responses.some(res => !res.ok)
+      if (algunaFallo) {
+        throw new Error('No se pudieron registrar algunas solicitudes')
+      }
+
+      alert(`¡Solicitud registrada con éxito para ${listaSolicitud.length} equipo(s)!`)
+      
+      // Limpia el formulario
+      setListaSolicitud([])
+      setNombrePersona('')
+      setNumeroControl('')
+      setIntegrantes(1)
+      setSearchTerm('')
+      setIsMaestro(false) // Resetea la casilla
+
+      // Recarga el historial de préstamos
+      fetchPrestamos()
+
     } catch (error) {
       console.error('Error en el formulario:', error)
       if (error instanceof Error) alert(`Error: ${error.message}`)
@@ -93,61 +194,119 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     }
   }
 
-  // --- ¡NUEVA FUNCIÓN PARA MANEJAR DEVOLUCIONES! ---
-  const handleDevolucion = async (prestamoId: number) => {
-    // Pedimos confirmación antes de marcar la devolución
-    if (!window.confirm('¿Estás seguro de que quieres marcar este préstamo como devuelto?')) {
-      return
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, {
-        method: 'PUT',
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al registrar la devolución')
-      }
-
-      alert('¡Devolución registrada con éxito!')
-      fetchPrestamos() // Recarga la lista para mostrar el cambio
-
-    } catch (error) {
-      console.error('Error al devolver:', error)
-      if (error instanceof Error) alert(`Error: ${error.message}`)
-      else alert('Ocurrió un error desconocido')
-    }
-  }
-  // --- FIN DE LA NUEVA FUNCIÓN ---
-
 
   if (loading) return <p>Cargando datos...</p>
 
+  // --- RENDERIZADO (JSX) ---
   return (
     <div>
-      {/* --- Formulario de Préstamo (sin cambios) --- */}
+      {/* --- NUEVO FORMULARIO DE PRÉSTAMO --- */}
       <section className="formulario-prestamo">
         <h2>Registrar un Nuevo Préstamo</h2>
         <form onSubmit={handleSubmit}>
-          {/* ... (todo el formulario sigue igual) ... */}
-          <div>
-            <label htmlFor="producto">Producto:</label>
-            <select id="producto" value={productoId} onChange={(e) => setProductoId(e.target.value)} required>
-              <option value="" disabled>-- Selecciona un producto --</option>
-              {productos.map((producto) => (
-                <option key={producto.id} value={producto.id}>{producto.nombre_equipo} (ID: {producto.id})</option>
+          
+          <fieldset>
+            <legend>Datos del Solicitante</legend>
+            
+            {/* --- ¡NUEVA FEATURE! Casilla de Maestro --- */}
+            <div className="maestro-check">
+              <input 
+                type="checkbox"
+                id="maestro"
+                checked={isMaestro}
+                onChange={(e) => setIsMaestro(e.target.checked)}
+              />
+              <label htmlFor="maestro">El solicitante es un Maestro</label>
+            </div>
+
+            <div>
+              <label htmlFor="nombre">Nombre Completo:</label>
+              <input 
+                type="text" 
+                id="nombre"
+                value={nombrePersona}
+                onChange={(e) => setNombrePersona(e.target.value)}
+                required
+              />
+            </div>
+            
+            {/* --- LÓGICA DE MAESTRO: Mostrar solo si NO es maestro --- */}
+            {!isMaestro && (
+              <div>
+                <label htmlFor="control">Número de Control:</label>
+                <input 
+                  type="text" 
+                  id="control"
+                  value={numeroControl}
+                  onChange={(e) => setNumeroControl(e.target.value)}
+                  required={!isMaestro} // Es requerido si no es maestro
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="integrantes">Número de Integrantes (total):</label>
+              <input 
+                type="number" 
+                id="integrantes"
+                value={integrantes}
+                min="1"
+                onChange={(e) => setIntegrantes(parseInt(e.target.value) || 1)}
+                required
+              />
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Equipos a Solicitar</legend>
+            <label htmlFor="busqueda">Buscar equipo (ej: "Osciloscopio", "Caiman"):</label>
+            <input
+              type="text"
+              id="busqueda"
+              value={searchTerm}
+              onChange={handleSearch}
+              placeholder="Escribe el nombre del equipo..."
+              autoComplete="off"
+            />
+            <div className="search-results">
+              {searchResults.map((producto) => (
+                <button 
+                  type="button" 
+                  key={producto.id} 
+                  onClick={() => handleAddItem(producto)}
+                  className="search-result-item"
+                >
+                  Añadir: {producto.nombre_equipo}
+                </button>
               ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="nombre">Nombre de la Persona:</label>
-            <input type="text" id="nombre" value={nombrePersona} onChange={(e) => setNombrePersona(e.target.value)} required />
-          </div>
-          <button type="submit" disabled={enviando}>{enviando ? 'Registrando...' : 'Registrar Préstamo'}</button>
+            </div>
+
+            <div className="lista-solicitud">
+              <h4>Equipos en esta solicitud:</h4>
+              {listaSolicitud.length === 0 ? (
+                <p>Aún no has añadido equipos.</p>
+              ) : (
+                <ul>
+                  {listaSolicitud.map((prod) => (
+                    <li key={prod.id}>
+                      {prod.nombre_equipo}
+                      <button type="button" onClick={() => handleRemoveItem(prod.id)} className="remove-btn">
+                        Quitar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </fieldset>
+
+          <button type="submit" disabled={enviando || loading} className="submit-btn">
+            {enviando ? 'Enviando...' : 'Registrar Préstamo(s)'}
+          </button>
         </form>
       </section>
 
-      {/* --- Lista de Préstamos (CON CAMBIOS) --- */}
+      {/* --- LISTA DE PRÉSTAMOS (Sin cambios) --- */}
       <section className="lista-prestamos">
         <h2>Historial de Préstamos</h2>
         <table>
@@ -158,7 +317,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
               <th>Persona</th>
               <th>Fecha Préstamo</th>
               <th>Fecha Devolución</th>
-              <th>Acción</th> {/* <-- NUEVA COLUMNA */}
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -169,8 +328,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                 <td>{prestamo.nombre_persona}</td>
                 <td>{new Date(prestamo.fecha_prestamo).toLocaleString()}</td>
                 <td>{prestamo.fecha_devolucion ? new Date(prestamo.fecha_devolucion).toLocaleString() : 'Pendiente'}</td>
-                
-                {/* --- NUEVA CELDA CON LÓGICA CONDICIONAL --- */}
                 <td>
                   {prestamo.fecha_devolucion ? (
                     <span style={{ color: 'green' }}>Devuelto</span>
@@ -180,8 +337,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                     </button>
                   )}
                 </td>
-                {/* --- FIN DE LA NUEVA CELDA --- */}
-
               </tr>
             ))}
           </tbody>
