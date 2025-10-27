@@ -1,4 +1,6 @@
-import { useState, useEffect, FormEvent } from 'react' // <--- Añadimos FormEvent
+// FIX 1: Importar tipos (FormEvent) por separado con 'import type'
+import { useState, useEffect } from 'react'
+import type { FormEvent } from 'react'
 
 // Define la estructura de tus datos de Préstamo
 interface Prestamo {
@@ -9,7 +11,7 @@ interface Prestamo {
   nombre_equipo: string; 
 }
 
-// NUEVO: Definición del tipo Producto (para el dropdown)
+// Definición del tipo Producto (para el dropdown)
 interface Producto {
   id: number;
   nombre_equipo: string;
@@ -22,11 +24,7 @@ interface PrestamosProps {
 function Prestamos({ apiUrl }: PrestamosProps) {
   const [prestamos, setPrestamos] = useState<Prestamo[]>([])
   const [loading, setLoading] = useState(true)
-
-  // NUEVO: Estado para la lista de productos (para el dropdown)
   const [productos, setProductos] = useState<Producto[]>([])
-
-  // NUEVO: Estado para los campos del formulario
   const [productoId, setProductoId] = useState('')
   const [nombrePersona, setNombrePersona] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -42,7 +40,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     }
   }
 
-  // NUEVO: Función para cargar los productos del inventario
+  // Función para cargar los productos del inventario
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/inventario`)
@@ -57,7 +55,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
   useEffect(() => {
     const cargarDatos = async () => {
       setLoading(true)
-      // Ejecuta ambas peticiones en paralelo
       await Promise.all([
         fetchPrestamos(),
         fetchProductos()
@@ -65,11 +62,11 @@ function Prestamos({ apiUrl }: PrestamosProps) {
       setLoading(false)
     }
     cargarDatos()
-  }, []) // El array vacío asegura que se ejecute solo una vez al montar
+  }, []) 
 
-  // NUEVO: Función para manejar el envío del formulario
+  // Función para manejar el envío del formulario
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault() // Evita que la página se recargue
+    e.preventDefault() 
     
     if (!productoId || !nombrePersona) {
       alert('Por favor, selecciona un producto e ingresa un nombre.')
@@ -84,7 +81,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        // El ID debe ser número, el valor del select es string
         body: JSON.stringify({
           producto_id: parseInt(productoId), 
           nombre_persona: nombrePersona,
@@ -95,15 +91,19 @@ function Prestamos({ apiUrl }: PrestamosProps) {
         throw new Error('Error al registrar el préstamo')
       }
 
-      // ¡Éxito!
       alert('¡Préstamo registrado con éxito!')
-      setProductoId('') // Limpia el formulario
-      setNombrePersona('') // Limpia el formulario
-      fetchPrestamos() // Vuelve a cargar la lista de préstamos actualizada
+      setProductoId('') 
+      setNombrePersona('') 
+      fetchPrestamos() // Vuelve a cargar la lista de préstamos
 
     } catch (error) {
+      // FIX 2: Comprobar si 'error' es una instancia de Error
       console.error('Error en el formulario:', error)
-      alert(`Error: ${error.message}`)
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`)
+      } else {
+        alert('Ocurrió un error desconocido')
+      }
     } finally {
       setEnviando(false)
     }
@@ -113,7 +113,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
 
   return (
     <div>
-      {/* --- NUEVO: Formulario de Préstamo --- */}
+      {/* --- Formulario de Préstamo --- */}
       <section className="formulario-prestamo">
         <h2>Registrar un Nuevo Préstamo</h2>
         <form onSubmit={handleSubmit}>
