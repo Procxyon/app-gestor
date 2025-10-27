@@ -1,0 +1,11 @@
+name = "api-inventario" # Dale un nombre único a tu worker
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+
+# --- AÑADE ESTA SECCIÓN ---
+# Esto "conecta" tu base de datos D1 a tu Worker.
+# El "database_id" lo encuentras en el dashboard de Cloudflare D1.
+[[d1_databases]]
+binding = "DB" # Este es el nombre que usarás en tu CÓDIGO para llamar a la DB
+database_name = "tu-nombre-de-db" # El nombre que le diste en Cloudflare
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
