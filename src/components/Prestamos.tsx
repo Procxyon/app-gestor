@@ -1,347 +1,305 @@
-// Nuevas importaciones
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import Fuse from 'fuse.js' // <-- Importamos Fuse.js
 
-// --- INTERFACES ---
+// --- ¡INTERFAZ ACTUALIZADA! ---
 interface Prestamo {
   id: number;
+  producto_id: number;
   nombre_persona: string;
   fecha_prestamo: string;
   fecha_devolucion: string | null;
-  nombre_equipo: string; 
-}
-
-interface Producto {
-  id: number;
   nombre_equipo: string;
+  id_persona: string | null;
+  cantidad: number;
+  materia: string | null;
+  grupo: string | null;
+  integrantes: number;
+  solicitud_uuid: string | null; // <-- ¡NUEVO VÍNCULO!
 }
-
-// Opciones para la búsqueda difusa
-const fuseOptions = {
-  keys: ['nombre_equipo'],
-  threshold: 0.4,
-  includeScore: true
-};
 
 interface PrestamosProps {
   apiUrl: string;
 }
 
+// Datos para el formulario (solo datos compartidos)
+type EditFormData = {
+  nombre_persona: string;
+  id_persona: string | null;
+  integrantes: number;
+  materia: string | null;
+  grupo: string | null;
+}
+
 function Prestamos({ apiUrl }: PrestamosProps) {
-  // --- ESTADO PARA LA LISTA (HISTORIAL) ---
   const [prestamos, setPrestamos] = useState<Prestamo[]>([])
   const [loading, setLoading] = useState(true)
+  const [modalModificarAbierto, setModalModificarAbierto] = useState(false)
+  const [prestamoSeleccionado, setPrestamoSeleccionado] = useState<Prestamo | null>(null)
+  const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
+  const [enviandoModificacion, setEnviandoModificacion] = useState(false)
 
-  // --- ESTADO PARA EL NUEVO FORMULARIO ---
-  const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([])
-  const [listaSolicitud, setListaSolicitud] = useState<Producto[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState<Producto[]>([])
-  const [nombrePersona, setNombrePersona] = useState('')
-  const [numeroControl, setNumeroControl] = useState('')
-  const [integrantes, setIntegrantes] = useState(1)
-  const [enviando, setEnviando] = useState(false)
-  
-  // --- ¡NUEVA FEATURE! ---
-  const [isMaestro, setIsMaestro] = useState(false)
-
-  // Instancia de Fuse para la búsqueda
-  const fuse = useMemo(() => new Fuse(todosLosProductos, fuseOptions), [todosLosProductos])
-
-  // --- FUNCIONES DEL HISTORIAL (Sin cambios) ---
+  // fetchPrestamos ya está actualizado por el backend (obtiene solicitud_uuid)
   const fetchPrestamos = async () => {
+    setLoading(true)
     try {
       const response = await fetch(`${apiUrl}/api/prestamos`)
-      const data = await response.json()
+      const data: Prestamo[] = await response.json()
+      data.sort((a, b) => 
+        (a.fecha_devolucion ? 1 : -1) - (b.fecha_devolucion ? 1 : -1) || 
+        new Date(b.fecha_prestamo).getTime() - new Date(a.fecha_prestamo).getTime()
+      );
       setPrestamos(data)
-    } catch (error) {
-      console.error('Error al cargar préstamos:', error)
-    }
+    } catch (error) { console.error('Error al cargar préstamos:', error) }
+    setLoading(false)
   }
 
+  useEffect(() => { fetchPrestamos() }, [apiUrl])
+
+  // handleDevolucion (sin cambios)
   const handleDevolucion = async (prestamoId: number) => {
-    if (!window.confirm('¿Estás seguro de que quieres marcar este préstamo como devuelto?')) {
-      return
-    }
+    if (!window.confirm('¿Seguro?')) return;
     try {
-      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, {
-        method: 'PUT',
-      })
+      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, { method: 'PUT' })
       if (!response.ok) throw new Error('Error al registrar la devolución')
-      alert('¡Devolución registrada con éxito!')
+      alert('¡Devolución registrada!')
       fetchPrestamos() 
     } catch (error) {
-      console.error('Error al devolver:', error)
       if (error instanceof Error) alert(`Error: ${error.message}`)
-      else alert('Ocurrió un error desconocido')
     }
   }
 
-  // --- FUNCIONES DEL FORMULARIO (Nuevas/Actualizadas) ---
-  const fetchProductos = async () => {
+  // handleExportCSV (sin cambios)
+  const handleExportCSV = () => {
+    if (prestamos.length === 0) return;
+    const headers = [
+      "ID", "Solicitud_UUID", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", 
+      "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución"
+    ];
+    const rows = prestamos.map(p => [
+      p.id,
+      p.solicitud_uuid || 'N/A', // <-- Exportamos el nuevo UUID
+      p.nombre_equipo.replace(/,/g, ''),
+      p.cantidad,
+      p.nombre_persona.replace(/,/g, ''),
+      p.id_persona || 'Maestro',
+      p.integrantes,
+      p.materia || 'N/A',
+      p.grupo || 'N/A',
+      new Date(p.fecha_prestamo).toLocaleString(),
+      p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : 'Pendiente'
+    ].join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "historial_prestamos.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // handleDeleteAll (sin cambios)
+  const handleDeleteAll = async () => {
+    if (!window.confirm("¿BORRAR TODO?")) return;
+    if (!window.confirm("¡¡ADVERTENCIA FINAL!! ¿CONTINUAR?")) return;
     try {
-      const response = await fetch(`${apiUrl}/api/inventario`)
-      const data = await response.json()
-      setTodosLosProductos(data) // Almacena todos los productos para la búsqueda
+      const response = await fetch(`${apiUrl}/api/prestamos/all`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Error al borrar el historial');
+      alert('Historial borrado.');
+      fetchPrestamos();
     } catch (error) {
-      console.error('Error al cargar productos:', error)
+      if (error instanceof Error) alert(`Error: ${error.message}`);
     }
   }
 
-  // Carga TODOS los datos (historial y productos) al inicio
-  useEffect(() => {
-    const cargarDatos = async () => {
-      setLoading(true)
-      await Promise.all([
-        fetchPrestamos(),
-        fetchProductos()
-      ])
-      setLoading(false)
+  // handleOpenModalModificar (¡Actualizado!)
+  const handleOpenModalModificar = (prestamo: Prestamo) => {
+    if (!prestamo.solicitud_uuid) {
+      alert("Error: Este es un préstamo antiguo sin 'ID de Solicitud'. No se puede modificar en cadena.");
+      return;
     }
-    cargarDatos()
-  }, []) 
-
-  // Búsqueda
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearchTerm = e.target.value
-    setSearchTerm(newSearchTerm)
-    if (newSearchTerm.trim() === '') {
-      setSearchResults([])
-      return
-    }
-    const results = fuse.search(newSearchTerm).map(result => result.item)
-    setSearchResults(results.slice(0, 5)) 
+    setPrestamoSeleccionado(prestamo);
+    // Pre-llena el formulario solo con datos compartidos
+    setEditFormData({
+      nombre_persona: prestamo.nombre_persona,
+      id_persona: prestamo.id_persona,
+      integrantes: prestamo.integrantes,
+      materia: prestamo.materia,
+      grupo: prestamo.grupo
+    });
+    setModalModificarAbierto(true);
   }
 
-  // Añadir a la lista
-  const handleAddItem = (producto: Producto) => {
-    if (!listaSolicitud.find(item => item.id === producto.id)) {
-      setListaSolicitud([...listaSolicitud, producto])
-    }
-    setSearchTerm('')
-    setSearchResults([])
+  // handleEditFormChange (sin cambios, maneja los inputs)
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => prev ? ({ ...prev, [name]: value }) : null);
   }
 
-  // Quitar de la lista
-  const handleRemoveItem = (productoId: number) => {
-    setListaSolicitud(listaSolicitud.filter(item => item.id !== productoId))
-  }
-
-  // ¡NUEVO SUBMIT! (Fusiona todo)
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault() 
-    
-    if (listaSolicitud.length === 0) {
-      alert('Debes añadir al menos un equipo a tu solicitud.')
-      return
+  // --- ¡handleUpdatePrestamo (Totalmente Actualizado!) ---
+  const handleUpdatePrestamo = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editFormData || !prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) {
+      alert("Error: No se encontró el ID de la solicitud.");
+      return;
     }
     
-    // --- LÓGICA DE MAESTRO ---
-    if (!isMaestro && !numeroControl.trim()) {
-      alert('El Número de Control es obligatorio para alumnos.')
-      return
-    }
-
-    if (!nombrePersona.trim() || !integrantes) {
-      alert('Por favor, llena el nombre y el número de integrantes.')
-      return
-    }
-    
-    setEnviando(true)
-
-    const solicitudes = listaSolicitud.map(producto => {
-      return fetch(`${apiUrl}/api/prestamos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          producto_id: producto.id, 
-          nombre_persona: nombrePersona,
-          // --- LÓGICA DE MAESTRO ---
-          // Si es maestro, envía null. Si no, envía el número de control.
-          numero_de_control: isMaestro ? null : numeroControl,
-          integrantes: integrantes
-        }),
-      })
-    })
-
+    setEnviandoModificacion(true);
     try {
-      const responses = await Promise.all(solicitudes)
-      const algunaFallo = responses.some(res => !res.ok)
-      if (algunaFallo) {
-        throw new Error('No se pudieron registrar algunas solicitudes')
+      // Llama a la NUEVA ruta del backend
+      const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData) // Envía solo los datos compartidos
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.err || 'Error al actualizar');
       }
 
-      alert(`¡Solicitud registrada con éxito para ${listaSolicitud.length} equipo(s)!`)
-      
-      // Limpia el formulario
-      setListaSolicitud([])
-      setNombrePersona('')
-      setNumeroControl('')
-      setIntegrantes(1)
-      setSearchTerm('')
-      setIsMaestro(false) // Resetea la casilla
-
-      // Recarga el historial de préstamos
-      fetchPrestamos()
+      alert('¡Solicitud actualizada! (Todos los items vinculados fueron modificados)');
+      setModalModificarAbierto(false);
+      setPrestamoSeleccionado(null);
+      fetchPrestamos(); // Recarga el historial
 
     } catch (error) {
-      console.error('Error en el formulario:', error)
-      if (error instanceof Error) alert(`Error: ${error.message}`)
-      else alert('Ocurrió un error desconocido')
+      console.error('Error al modificar:', error);
+      if (error instanceof Error) alert(`Error: ${error.message}`);
+      else alert('Ocurrió un error desconocido');
     } finally {
-      setEnviando(false)
+      setEnviandoModificacion(false);
     }
   }
 
+  // --- RENDERIZADO (Tabla + Botones + Modal) ---
+  if (loading) return <p>Cargando historial de préstamos...</p>
 
-  if (loading) return <p>Cargando datos...</p>
-
-  // --- RENDERIZADO (JSX) ---
   return (
-    <div>
-      {/* --- NUEVO FORMULARIO DE PRÉSTAMO --- */}
-      <section className="formulario-prestamo">
-        <h2>Registrar un Nuevo Préstamo</h2>
-        <form onSubmit={handleSubmit}>
-          
-          <fieldset>
-            <legend>Datos del Solicitante</legend>
-            
-            {/* --- ¡NUEVA FEATURE! Casilla de Maestro --- */}
-            <div className="maestro-check">
-              <input 
-                type="checkbox"
-                id="maestro"
-                checked={isMaestro}
-                onChange={(e) => setIsMaestro(e.target.checked)}
-              />
-              <label htmlFor="maestro">El solicitante es un Maestro</label>
-            </div>
-
-            <div>
-              <label htmlFor="nombre">Nombre Completo:</label>
-              <input 
-                type="text" 
-                id="nombre"
-                value={nombrePersona}
-                onChange={(e) => setNombrePersona(e.target.value)}
-                required
-              />
-            </div>
-            
-            {/* --- LÓGICA DE MAESTRO: Mostrar solo si NO es maestro --- */}
-            {!isMaestro && (
-              <div>
-                <label htmlFor="control">Número de Control:</label>
-                <input 
-                  type="text" 
-                  id="control"
-                  value={numeroControl}
-                  onChange={(e) => setNumeroControl(e.target.value)}
-                  required={!isMaestro} // Es requerido si no es maestro
-                />
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="integrantes">Número de Integrantes (total):</label>
-              <input 
-                type="number" 
-                id="integrantes"
-                value={integrantes}
-                min="1"
-                onChange={(e) => setIntegrantes(parseInt(e.target.value) || 1)}
-                required
-              />
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Equipos a Solicitar</legend>
-            <label htmlFor="busqueda">Buscar equipo (ej: "Osciloscopio", "Caiman"):</label>
-            <input
-              type="text"
-              id="busqueda"
-              value={searchTerm}
-              onChange={handleSearch}
-              placeholder="Escribe el nombre del equipo..."
-              autoComplete="off"
-            />
-            <div className="search-results">
-              {searchResults.map((producto) => (
-                <button 
-                  type="button" 
-                  key={producto.id} 
-                  onClick={() => handleAddItem(producto)}
-                  className="search-result-item"
-                >
-                  Añadir: {producto.nombre_equipo}
-                </button>
-              ))}
-            </div>
-
-            <div className="lista-solicitud">
-              <h4>Equipos en esta solicitud:</h4>
-              {listaSolicitud.length === 0 ? (
-                <p>Aún no has añadido equipos.</p>
-              ) : (
-                <ul>
-                  {listaSolicitud.map((prod) => (
-                    <li key={prod.id}>
-                      {prod.nombre_equipo}
-                      <button type="button" onClick={() => handleRemoveItem(prod.id)} className="remove-btn">
-                        Quitar
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </fieldset>
-
-          <button type="submit" disabled={enviando || loading} className="submit-btn">
-            {enviando ? 'Enviando...' : 'Registrar Préstamo(s)'}
-          </button>
-        </form>
-      </section>
-
-      {/* --- LISTA DE PRÉSTAMOS (Sin cambios) --- */}
-      <section className="lista-prestamos">
-        <h2>Historial de Préstamos</h2>
+    <div className="lista-prestamos-container">
+      <h2>Historial de Préstamos</h2>
+      
+      <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Acción</th>
+              <th>Estado</th>
               <th>Producto</th>
-              <th>Persona</th>
+              <th>Cantidad</th>
+              <th>Solicitante</th>
+              <th>N° Control / Maestro</th>
+              <th>Folio Solicitud (UUID)</th> {/* <-- Nueva columna útil */}
+              <th>Materia</th>
+              <th>Grupo</th>
               <th>Fecha Préstamo</th>
               <th>Fecha Devolución</th>
-              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
             {prestamos.map((prestamo) => (
               <tr key={prestamo.id}>
-                <td>{prestamo.id}</td>
-                <td>{prestamo.nombre_equipo}</td>
-                <td>{prestamo.nombre_persona}</td>
-                <td>{new Date(prestamo.fecha_prestamo).toLocaleString()}</td>
-                <td>{prestamo.fecha_devolucion ? new Date(prestamo.fecha_devolucion).toLocaleString() : 'Pendiente'}</td>
                 <td>
-                  {prestamo.fecha_devolucion ? (
-                    <span style={{ color: 'green' }}>Devuelto</span>
-                  ) : (
-                    <button onClick={() => handleDevolucion(prestamo.id)}>
-                      Marcar Devolución
+                  {!prestamo.fecha_devolucion && (
+                    <button onClick={() => handleDevolucion(prestamo.id)} className="devolver-btn">
+                      Devolver
                     </button>
                   )}
+                  {/* El botón ahora modifica la SOLICITUD, no el item */}
+                  <button 
+                    onClick={() => handleOpenModalModificar(prestamo)} 
+                    className="modify-btn"
+                    disabled={!!prestamo.fecha_devolucion || !prestamo.solicitud_uuid} // Deshabilitado si se devolvió O si es antiguo
+                  >
+                    Modificar
+                  </button>
                 </td>
+                
+                <td>
+                  {prestamo.fecha_devolucion ? (
+                    <span style={{ color: 'green', fontWeight: 'bold' }}>Devuelto</span>
+                  ) : (
+                    <span style={{ color: 'orange', fontWeight: 'bold' }}>Pendiente</span>
+                  )}
+                </td>
+                <td>{prestamo.nombre_equipo}</td>
+                <td>{prestamo.cantidad || 1}</td>
+                <td>{prestamo.nombre_persona}</td>
+                <td>{prestamo.id_persona ? prestamo.id_persona : (<span style={{ fontStyle: 'italic' }}>Maestro</span>)}</td>
+                
+                {/* Nueva columna para ver el "folio" */}
+                <td>{prestamo.solicitud_uuid ? (
+                  <span title={prestamo.solicitud_uuid}>{prestamo.solicitud_uuid.substring(0, 8)}...</span>
+                  ) : 'N/A'}
+                </td>
+                
+                <td>{prestamo.materia || 'N/A'}</td>
+                <td>{prestamo.grupo || 'N/A'}</td>
+                <td>{new Date(prestamo.fecha_prestamo).toLocaleString()}</td>
+                <td>{prestamo.fecha_devolucion ? new Date(prestamo.fecha_devolucion).toLocaleString() : '---'}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
+      </div>
+
+      {/* Botones Generales (sin cambios) */}
+      <div className="general-actions">
+        <button onClick={handleExportCSV} className="export-btn">
+          Exportar a CSV
+        </button>
+        <button onClick={handleDeleteAll} className="delete-all-btn">
+          Borrar Historial
+        </button>
+      </div>
+
+      {/* --- MODAL DE MODIFICAR (Actualizado) --- */}
+      {/* Ya no muestra 'cantidad', solo los datos compartidos */}
+      {modalModificarAbierto && editFormData && prestamoSeleccionado && (
+        <div className="modal-overlay" onClick={() => setModalModificarAbierto(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Modificar Solicitud (Folio: ...{prestamoSeleccionado.solicitud_uuid?.substring(28)})</h2>
+            <p><strong>Nota:</strong> Esto modificará los datos de <strong>todos</strong> los equipos en esta solicitud.</p>
+
+            <form onSubmit={handleUpdatePrestamo} className="formulario-prestamo">
+              <fieldset>
+                <legend>Datos de la Solicitud</legend>
+                <div>
+                  <label htmlFor="edit_nombre_persona">Nombre Solicitante:</label>
+                  <input type="text" id="edit_nombre_persona" name="nombre_persona" value={editFormData.nombre_persona} onChange={handleEditFormChange} required />
+                </div>
+                <div>
+                  <label htmlFor="edit_id_persona">N° Control (o dejar vacío si es Maestro):</label>
+                  <input type="text" id="edit_id_persona" name="id_persona" value={editFormData.id_persona || ''} onChange={handleEditFormChange} />
+                </div>
+                <div className="form-group"> {/* (No necesita .form-row si es solo 1) */}
+                    <label htmlFor="edit_integrantes">Integrantes:</label>
+                    <input type="number" id="edit_integrantes" name="integrantes" value={editFormData.integrantes} min="1" onChange={handleEditFormChange} required />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit_materia">Materia (Opcional):</label>
+                    <input type="text" id="edit_materia" name="materia" value={editFormData.materia || ''} onChange={handleEditFormChange} />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit_grupo">Grupo (Opcional):</label>
+                    <input type="text" id="edit_grupo" name="grupo" value={editFormData.grupo || ''} onChange={handleEditFormChange} />
+                  </div>
+                </div>
+              </fieldset>
+              <div className="modal-actions">
+                <button type="button" className="modal-close-btn" onClick={() => setModalModificarAbierto(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="submit-btn" disabled={enviandoModificacion}>
+                  {enviandoModificacion ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+            
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -40,3 +40,78 @@
 .read-the-docs {
   color: #888;
 }
+/* --- Estilos para la tabla (Mejoras) --- */
+.lista-prestamos-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+.lista-prestamos-container th,
+.lista-prestamos-container td {
+  border: 1px solid #444; /* Bordes para modo oscuro */
+  padding: 10px;
+  text-align: left;
+}
+.lista-prestamos-container th {
+  background-color: #333; /* Cabecera oscura */
+}
+.lista-prestamos-container tr:nth-child(even) {
+  background-color: #2a2a2a; /* Filas alternas */
+}
+
+/* --- Estilos para botones de acción en la tabla --- */
+.devolver-btn, .modify-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 0.9em;
+}
+.devolver-btn {
+  background-color: #ffc107; /* Amarillo */
+  color: #000;
+}
+.modify-btn {
+  background-color: #17a2b8; /* Azul info */
+  color: white;
+}
+.modify-btn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+/* --- Estilos para botones de Exportar y Borrar --- */
+.general-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #444;
+}
+.export-btn, .delete-all-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+}
+.export-btn {
+  background-color: #28a745; /* Verde */
+  color: white;
+}
+.delete-all-btn {
+  background-color: #dc3545; /* Rojo */
+  color: white;
+}
+
+/* --- Estilos para el modal de Modificar --- */
+/* (Usamos .modal-overlay y .modal-content que ya definiste) */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+/* (Usamos .modal-close-btn que ya definiste) */
