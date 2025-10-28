@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react' // Se añade useMemo
 import type { FormEvent } from 'react'
+import * as XLSX from 'xlsx'; // Importación para Excel
+import Fuse from 'fuse.js'; // Importación para búsqueda
 
+// --- Interfaces ---
 interface Prestamo {
   id: number;
   producto_id: number;
@@ -13,13 +16,23 @@ interface Prestamo {
   materia: string | null;
   grupo: string | null;
   integrantes: number;
-  solicitud_uuid: string | null;
+  solicitud_uuid: string | null; // El "folio"
+}
+
+// Para la lista completa de productos
+interface Producto {
+  id: number;
+  nombre_equipo: string;
+}
+// Para los items en la lista de añadir/modificar
+interface SolicitudItem extends Producto {
+  cantidad: number;
 }
 
 interface PrestamosProps {
   apiUrl: string;
 }
-
+// Para el formulario de edición (solo datos compartidos)
 type EditFormData = {
   nombre_persona: string;
   id_persona: string | null;
@@ -28,149 +41,277 @@ type EditFormData = {
   grupo: string | null;
 }
 
+// Opciones de búsqueda para el modal
+const fuseOptions = {
+  keys: ['nombre_equipo'],
+  threshold: 0.4,
+  includeScore: true
+};
+// --- Fin de Interfaces ---
+
 function Prestamos({ apiUrl }: PrestamosProps) {
+  // --- Estados Principales ---
   const [prestamos, setPrestamos] = useState<Prestamo[]>([])
   const [loading, setLoading] = useState(true)
+
+  // --- Estados del Modal de Modificación ---
   const [modalModificarAbierto, setModalModificarAbierto] = useState(false)
   const [prestamoSeleccionado, setPrestamoSeleccionado] = useState<Prestamo | null>(null)
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
   const [enviandoModificacion, setEnviandoModificacion] = useState(false)
 
-  // Cargar Préstamos
+  // --- Estados para Añadir Items DENTRO del Modal ---
+  const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([])
+  const [nuevosItemsParaAnadir, setNuevosItemsParaAnadir] = useState<SolicitudItem[]>([])
+  const [modalSearchTerm, setModalSearchTerm] = useState('')
+  const [modalSearchResults, setModalSearchResults] = useState<Producto[]>([])
+  const fuse = useMemo(() => new Fuse(todosLosProductos, fuseOptions), [todosLosProductos])
+
+  // --- Función para Cargar Préstamos ---
   const fetchPrestamos = async () => {
-    setLoading(true)
+    // No reseteamos loading aquí para evitar parpadeos al refrescar
     try {
-      const response = await fetch(`${apiUrl}/api/prestamos`)
-      const data: Prestamo[] = await response.json()
+      const response = await fetch(`${apiUrl}/api/prestamos`);
+      const data: Prestamo[] = await response.json();
       data.sort((a, b) => 
         (a.fecha_devolucion ? 1 : -1) - (b.fecha_devolucion ? 1 : -1) || 
         new Date(b.fecha_prestamo).getTime() - new Date(a.fecha_prestamo).getTime()
       );
-      setPrestamos(data)
-    } catch (error) { console.error('Error al cargar préstamos:', error) }
-    setLoading(false)
+      setPrestamos(data);
+    } catch (error) { 
+      console.error('Error al cargar préstamos:', error);
+      // Podrías añadir un estado de error aquí para mostrarlo al usuario
+    }
+    // Solo quitamos el loading la primera vez
+    if(loading) setLoading(false);
   }
 
-  useEffect(() => { fetchPrestamos() }, [apiUrl])
+  // --- Carga Inicial de Datos (Préstamos e Inventario) ---
+  useEffect(() => {
+    const fetchDatosIniciales = async () => {
+      setLoading(true); // Ponemos loading al inicio
+      try {
+        // Ejecutamos ambas peticiones en paralelo para más rapidez
+        const [prestamosRes, productosRes] = await Promise.all([
+          fetch(`${apiUrl}/api/prestamos`),
+          fetch(`${apiUrl}/api/inventario`)
+        ]);
 
-  // --- Devolver UN (1) Item ---
-  // (Esta es la función del botón en la fila)
+        // Procesamos préstamos
+        const prestamosData: Prestamo[] = await prestamosRes.json();
+        prestamosData.sort((a, b) => 
+          (a.fecha_devolucion ? 1 : -1) - (b.fecha_devolucion ? 1 : -1) || 
+          new Date(b.fecha_prestamo).getTime() - new Date(a.fecha_prestamo).getTime()
+        );
+        setPrestamos(prestamosData);
+
+        // Procesamos inventario
+        const productosData: Producto[] = await productosRes.json();
+        setTodosLosProductos(productosData);
+
+      } catch (error) { 
+        console.error('Error al cargar datos iniciales:', error);
+        // Podrías manejar el error aquí (mostrar mensaje, etc.)
+      }
+      setLoading(false); // Quitamos loading al final
+    }
+    fetchDatosIniciales();
+  }, [apiUrl]); // Se ejecuta cuando apiUrl cambia (normalmente solo al inicio)
+
+
+  // --- Funciones de Acción (Devolver, Exportar, Borrar) ---
+
+  // Devolver UN (1) Item (desde la fila)
   const handleDevolucion = async (prestamoId: number) => {
     if (!window.confirm('¿Devolver este item individual?')) return;
     try {
-      // Llama a la ruta de DEVOLVER POR ID
-      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, { method: 'PUT' })
-      if (!response.ok) throw new Error('Error al registrar la devolución')
-      alert('¡Devolución de item registrada!')
-      fetchPrestamos() 
+      const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, { method: 'PUT' });
+      if (!response.ok) throw new Error('Error al registrar la devolución');
+      alert('¡Devolución de item registrada!');
+      fetchPrestamos(); // Refresca la lista
     } catch (error) {
-      if (error instanceof Error) alert(`Error: ${error.message}`)
+      if (error instanceof Error) alert(`Error: ${error.message}`);
+      else alert('Ocurrió un error desconocido');
     }
   }
 
-  // Exportar (sin cambios)
-  const handleExportCSV = () => {
-    // ... (Tu código de exportar CSV va aquí, sin cambios) ...
-    if (prestamos.length === 0) return;
-    const headers = ["ID", "Solicitud_UUID", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución"];
-    const rows = prestamos.map(p => [p.id, p.solicitud_uuid || 'N/A', p.nombre_equipo.replace(/,/g, ''), p.cantidad, p.nombre_persona.replace(/,/g, ''), p.id_persona || 'Maestro', p.integrantes, p.materia || 'N/A', p.grupo || 'N/A', new Date(p.fecha_prestamo).toLocaleString(), p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : 'Pendiente'].join(','));
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "historial_prestamos.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Exportar a Excel (.xlsx)
+  const handleExportXLS = () => {
+    if (prestamos.length === 0) {
+      alert("No hay datos para exportar.");
+      return;
+    }
+    const headers = ["ID", "Folio Solicitud", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución", "Estado"];
+    const rows = prestamos.map(p => [p.id, p.solicitud_uuid || 'N/A', p.nombre_equipo, p.cantidad, p.nombre_persona, p.id_persona || 'Maestro', p.integrantes, p.materia || 'N/A', p.grupo || 'N/A', new Date(p.fecha_prestamo).toLocaleString(), p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : '---', p.fecha_devolucion ? 'Devuelto' : 'Pendiente']);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 8 }, { wch: 30 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 10 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Historial de Préstamos");
+    XLSX.writeFile(wb, "historial_prestamos.xlsx");
   }
 
-  // Borrar Todo (sin cambios)
+  // Borrar Todo el Historial
   const handleDeleteAll = async () => {
-    // ... (Tu código de borrar todo va aquí, sin cambios) ...
-    if (!window.confirm("¿BORRAR TODO?")) return;
-    if (!window.confirm("¡¡ADVERTENCIA FINAL!! ¿CONTINUAR?")) return;
+    if (!window.confirm("¿ESTÁS SEGURO DE QUE QUIERES BORRAR TODO EL HISTORIAL?")) return;
+    if (!window.confirm("¡¡ADVERTENCIA FINAL!! Esta acción es irreversible. ¿Deseas continuar?")) return;
     try {
       const response = await fetch(`${apiUrl}/api/prestamos/all`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Error al borrar el historial');
-      alert('Historial borrado.');
-      fetchPrestamos();
+      alert('Historial borrado con éxito.');
+      fetchPrestamos(); // Refresca (lista vacía)
     } catch (error) {
       if (error instanceof Error) alert(`Error: ${error.message}`);
+      else alert('Ocurrió un error desconocido');
     }
   }
 
-  // Abrir Modal (sin cambios)
+  // --- Funciones del Modal de Modificación ---
+
+  // Abrir Modal y Resetear Formulario Interno
   const handleOpenModalModificar = (prestamo: Prestamo) => {
     if (!prestamo.solicitud_uuid) {
       alert("Error: Este es un préstamo antiguo sin 'ID de Solicitud'. No se puede modificar en cadena.");
       return;
     }
     setPrestamoSeleccionado(prestamo);
-    setEditFormData({
+    setEditFormData({ // Pre-llena datos compartidos
       nombre_persona: prestamo.nombre_persona,
       id_persona: prestamo.id_persona,
       integrantes: prestamo.integrantes,
       materia: prestamo.materia,
       grupo: prestamo.grupo
     });
+    // Resetea el mini-formulario de añadir
+    setNuevosItemsParaAnadir([]);
+    setModalSearchTerm('');
+    setModalSearchResults([]);
     setModalModificarAbierto(true);
   }
 
-  // Input Change (sin cambios)
+  // Manejar Cambios en Formulario de Edición
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditFormData(prev => prev ? ({ ...prev, [name]: value }) : null);
+    // Convierte a número si es 'integrantes'
+    const val = (name === 'integrantes') ? parseInt(value) || 1 : value;
+    setEditFormData(prev => prev ? ({ ...prev, [name]: val }) : null);
   }
 
-  // Enviar Modificación (sin cambios)
-  const handleUpdatePrestamo = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!editFormData || !prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) return;
+  // Devolver TODA la Solicitud (desde el modal)
+  const handleDevolverSolicitudCompleta = async () => {
+    if (!prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) return;
+    if (!window.confirm(`¿Devolver TODOS los items pendientes de esta solicitud?`)) return;
     setEnviandoModificacion(true);
     try {
-      // Llama a la ruta de MODIFICAR POR UUID
-      const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}`, {
+      const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}/devolver`, { method: 'PUT' });
+      if (!response.ok) throw new Error('Error al devolver la solicitud');
+      alert('¡Solicitud completa marcada como devuelta!');
+      setModalModificarAbierto(false);
+      fetchPrestamos(); // Refresca
+    } catch (error) {
+       if (error instanceof Error) alert(`Error: ${error.message}`);
+       else alert('Ocurrió un error desconocido al devolver');
+    } finally {
+      setEnviandoModificacion(false);
+    }
+  }
+
+  // --- Funciones del Mini-Formulario DENTRO del Modal ---
+  const handleModalSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value
+    setModalSearchTerm(newSearchTerm)
+    if (newSearchTerm.trim() === '') {
+      setModalSearchResults([])
+      return
+    }
+    const results = fuse.search(newSearchTerm).map(result => result.item)
+    setModalSearchResults(results.slice(0, 5)) 
+  }
+
+  const handleModalAddItem = (producto: Producto) => {
+    // Evita añadir items que ya estén en la solicitud original o en la lista de nuevos
+    const yaEnSolicitud = prestamos.some(p => p.solicitud_uuid === prestamoSeleccionado?.solicitud_uuid && p.producto_id === producto.id);
+    const yaEnNuevos = nuevosItemsParaAnadir.some(item => item.id === producto.id);
+    
+    if (!yaEnSolicitud && !yaEnNuevos) {
+      setNuevosItemsParaAnadir([...nuevosItemsParaAnadir, { ...producto, cantidad: 1 }]) 
+    } else {
+        alert("Este equipo ya está en la solicitud o ya lo has añadido.")
+    }
+    setModalSearchTerm('')
+    setModalSearchResults([])
+  }
+
+  const handleModalRemoveItem = (productoId: number) => {
+    setNuevosItemsParaAnadir(nuevosItemsParaAnadir.filter(item => item.id !== productoId))
+  }
+
+  const handleModalUpdateCantidad = (id: number, nuevaCantidad: number) => {
+    const cantidadValidada = Math.max(1, nuevaCantidad);
+    setNuevosItemsParaAnadir(nuevosItemsParaAnadir.map(item => 
+      item.id === id ? { ...item, cantidad: cantidadValidada } : item
+    ));
+  };
+  
+  // --- Función Principal de GUARDAR CAMBIOS del Modal ---
+  const handleUpdatePrestamo = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editFormData || !prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) {
+        alert("Error crítico: Faltan datos para actualizar.");
+        return;
+    }
+    
+    setEnviandoModificacion(true);
+    try {
+      // 1. Promesa para actualizar los datos compartidos
+      const updateSharedData = fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editFormData)
       });
-      if (!response.ok) throw new Error('Error al actualizar');
-      alert('¡Solicitud actualizada!');
+
+      // 2. Array de promesas para AÑADIR los nuevos items
+      const addNuevosItems = nuevosItemsParaAnadir.map(producto => {
+        return fetch(`${apiUrl}/api/prestamos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // Datos compartidos (del formulario de edición)
+            nombre_persona: editFormData.nombre_persona,
+            // Si es maestro (id_persona null) envía null, si no, envía el valor
+            numero_de_control: editFormData.id_persona, 
+            integrantes: editFormData.integrantes,
+            materia: editFormData.materia,
+            grupo: editFormData.grupo,
+            // Datos del nuevo item
+            producto_id: producto.id, 
+            cantidad: producto.cantidad,
+            // ¡El VÍNCULO! El UUID existente
+            solicitud_uuid: prestamoSeleccionado.solicitud_uuid 
+          })
+        })
+      });
+
+      // 3. Ejecuta todas las promesas en paralelo
+      const responses = await Promise.all([updateSharedData, ...addNuevosItems]);
+
+      const algunaFallo = responses.some(res => !res.ok);
+      if (algunaFallo) {
+        throw new Error('Error al actualizar la solicitud o al añadir nuevos items');
+      }
+
+      alert('¡Solicitud actualizada con éxito!');
       setModalModificarAbierto(false);
-      fetchPrestamos();
+      fetchPrestamos(); // Recarga la tabla
+
     } catch (error) {
+      console.error('Error al modificar:', error);
       if (error instanceof Error) alert(`Error: ${error.message}`);
+      else alert('Ocurrió un error desconocido al guardar');
     } finally {
       setEnviandoModificacion(false);
     }
   }
 
-  // --- ¡NUEVA FUNCIÓN! ---
-  // --- Devolver TODA la Solicitud (desde el modal) ---
-  const handleDevolverSolicitudCompleta = async () => {
-    if (!prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) return;
-    
-    if (!window.confirm(`¿Estás seguro de que quieres devolver TODOS los items pendientes de esta solicitud? (Folio: ...${prestamoSeleccionado.solicitud_uuid.slice(-8)})`)) {
-      return;
-    }
-    
-    setEnviandoModificacion(true); // Re-usamos el estado de "enviando"
-    try {
-      // Llama a la NUEVA ruta de DEVOLVER POR UUID
-      const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}/devolver`, {
-        method: 'PUT'
-      });
-      if (!response.ok) throw new Error('Error al devolver la solicitud');
-      
-      alert('¡Solicitud completa marcada como devuelta!');
-      setModalModificarAbierto(false); // Cierra el modal
-      fetchPrestamos(); // Recarga la tabla
-    } catch (error) {
-       if (error instanceof Error) alert(`Error: ${error.message}`);
-    } finally {
-      setEnviandoModificacion(false);
-    }
-  }
 
   // --- RENDERIZADO (JSX) ---
   if (loading) return <p>Cargando historial de préstamos...</p>
@@ -179,10 +320,10 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     <div className="lista-prestamos-container">
       <h2>Historial de Préstamos</h2>
       
-      <div style={{ overflowX: 'auto' }}>
+      {/* La tabla del historial */}
+      <div className="table-container">
         <table>
           <thead>
-            {/* ... (Tu <thead> de la tabla se queda igual) ... */}
             <tr>
               <th>Acción</th>
               <th>Estado</th>
@@ -200,25 +341,20 @@ function Prestamos({ apiUrl }: PrestamosProps) {
           <tbody>
             {prestamos.map((prestamo) => (
               <tr key={prestamo.id}>
-                {/* --- CAMBIO EN ONCLICK DE DEVOLVER --- */}
                 <td>
                   {!prestamo.fecha_devolucion && (
-                    // Este botón solo devuelve 1 item
                     <button onClick={() => handleDevolucion(prestamo.id)} className="devolver-btn"> 
                       Devolver Item
                     </button>
                   )}
-                  {/* Este botón abre el modal para la solicitud completa */}
                   <button 
                     onClick={() => handleOpenModalModificar(prestamo)} 
                     className="modify-btn"
-                    disabled={!prestamo.solicitud_uuid} // Deshabilitado si es un registro antiguo
+                    disabled={!prestamo.solicitud_uuid}
                   >
                     Ver Solicitud
                   </button>
                 </td>
-                
-                {/* ... (El resto de tu <tbody> se queda igual) ... */}
                 <td>
                   {prestamo.fecha_devolucion ? (
                     <span style={{ color: 'green', fontWeight: 'bold' }}>Devuelto</span>
@@ -244,25 +380,25 @@ function Prestamos({ apiUrl }: PrestamosProps) {
         </table>
       </div>
 
-      {/* Botones Generales (sin cambios) */}
+      {/* Botones Generales */}
       <div className="general-actions">
-        <button onClick={handleExportCSV} className="export-btn">
-          Exportar a CSV
+        <button onClick={handleExportXLS} className="export-btn">
+          Exportar a Excel (.xlsx)
         </button>
         <button onClick={handleDeleteAll} className="delete-all-btn">
           Borrar Historial
         </button>
       </div>
 
-      {/* --- MODAL DE MODIFICAR (ACTUALIZADO CON EL NUEVO BOTÓN) --- */}
+      {/* --- MODAL DE MODIFICAR (ACTUALIZADO CON SEGUNDO FIELDSET) --- */}
       {modalModificarAbierto && editFormData && prestamoSeleccionado && (
         <div className="modal-overlay" onClick={() => setModalModificarAbierto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Gestionar Solicitud (Folio: ...{prestamoSeleccionado.solicitud_uuid?.substring(28)})</h2>
             
-            {/* Formulario de Modificación */}
             <form onSubmit={handleUpdatePrestamo} className="formulario-prestamo">
-              {/* ... (El fieldset del formulario se queda igual) ... */}
+              
+              {/* --- FIELDSET 1: DATOS COMPARTIDOS --- */}
               <fieldset>
                 <legend>Datos de la Solicitud</legend>
                 <p><strong>Nota:</strong> Los cambios aquí afectarán a <strong>todos</strong> los items de esta solicitud.</p>
@@ -289,10 +425,51 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                   </div>
                 </div>
               </fieldset>
+
+              {/* --- FIELDSET 2: AÑADIR EQUIPOS --- */}
+              <fieldset>
+                <legend>Añadir Equipos a esta Solicitud</legend>
+                <label htmlFor="modal_busqueda">Buscar equipo:</label>
+                <input
+                  type="text"
+                  id="modal_busqueda"
+                  value={modalSearchTerm}
+                  onChange={handleModalSearch}
+                  placeholder="Escribe el nombre del equipo..."
+                />
+                <div className="search-results">
+                  {modalSearchResults.map((producto) => (
+                    <button type="button" key={producto.id} onClick={() => handleModalAddItem(producto)} className="search-result-item">
+                      Añadir: {producto.nombre_equipo}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="lista-solicitud">
+                  <h4>Nuevos equipos a añadir:</h4>
+                  {nuevosItemsParaAnadir.length === 0 ? (
+                    <p>No has añadido nuevos equipos.</p>
+                  ) : (
+                    <ul className="solicitud-items-list">
+                      {nuevosItemsParaAnadir.map((prod) => (
+                        <li key={prod.id} className="solicitud-item">
+                          <span className="item-name">{prod.nombre_equipo}</span>
+                          <div className="item-controls">
+                            <label htmlFor={`modal-qty-${prod.id}`}>Cantidad:</label>
+                            <input type="number" id={`modal-qty-${prod.id}`} className="item-quantity" value={prod.cantidad} min="1" onChange={(e) => handleModalUpdateCantidad(prod.id, parseInt(e.target.value) || 1)} />
+                            <button type="button" onClick={() => handleModalRemoveItem(prod.id)} className="remove-btn">
+                              Quitar
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </fieldset>
               
-              {/* --- ¡SECCIÓN DE BOTONES ACTUALIZADA! --- */}
+              {/* Botones de Acción del Modal */}
               <div className="modal-actions">
-                {/* Botón 1: Devolver Todo (NUEVO) */}
                 <button 
                   type="button" 
                   className="devolver-toda-btn"
@@ -301,14 +478,13 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                 >
                   Devolver Toda la Solicitud
                 </button>
-                
-                {/* Contenedor para los otros 2 botones */}
                 <div>
                   <button type="button" className="modal-close-btn" onClick={() => setModalModificarAbierto(false)}>
                     Cancelar
                   </button>
+                  {/* El botón de submit ahora guarda los cambios Y añade los nuevos items */}
                   <button type="submit" className="submit-btn" disabled={enviandoModificacion}>
-                    {enviandoModificacion ? 'Guardando...' : 'Guardar Cambios'}
+                    {enviandoModificacion ? 'Guardando...' : 'Guardar Cambios y Añadir'}
                   </button>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { FormEvent } from 'react'
 import Fuse from 'fuse.js' 
 
-// --- Interfaces (copiadas de app-solicitud) ---
+// --- Interfaces ---
 interface Producto {
   id: number;
   nombre_equipo: string;
@@ -21,7 +21,7 @@ const fuseOptions = {
 };
 
 function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
-  // --- Todos los estados del formulario ---
+  // --- Estados del formulario ---
   const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([])
   const [listaSolicitud, setListaSolicitud] = useState<SolicitudItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -34,16 +34,12 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
   const [materia, setMateria] = useState('')
   const [grupo, setGrupo] = useState('')
   
-  // --- ¡NUEVA FEATURE DE ADMIN! ---
   const [isMaestro, setIsMaestro] = useState(false)
-
-  const [terminosUso, setUso] = useState(false)
-  const [modalAbierto, setModalAbierto] = useState(false)
   
   const [loading, setLoading] = useState(true)
   const [enviando, setEnviando] = useState(false)
 
-  // Carga los productos para la búsqueda
+  // Carga los productos
   useEffect(() => {
     const fetchProductos = async () => {
       setLoading(true);
@@ -57,9 +53,9 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
       setLoading(false);
     }
     fetchProductos()
-  }, [apiUrl]) // <- Añadimos apiUrl como dependencia
+  }, [apiUrl])
 
-  // --- Todas las funciones de manejo del formulario ---
+  // --- Funciones de manejo del formulario ---
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchTerm = e.target.value
     setSearchTerm(newSearchTerm)
@@ -90,29 +86,26 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
     ));
   };
 
-  // --- FUNCIÓN DE ENVÍO (CON LÓGICA DE MAESTRO) ---
+  // --- FUNCIÓN DE ENVÍO (ACTUALIZADA) ---
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault() 
     
-    if (!terminosUso) {
-      alert('Debes aceptar el reglamento de uso para poder enviar la solicitud.')
-      return
-    }
     if (listaSolicitud.length === 0) {
       alert('Debes añadir al menos un equipo a tu solicitud.')
       return
     }
-    // --- LÓGICA DE MAESTRO (VALIDACIÓN) ---
     if (!isMaestro && !numeroControl.trim()) {
       alert('El Número de Control es obligatorio para alumnos.')
       return
     }
-    if (!nombrePersona.trim() || !integrantes) {
-      alert('Por favor, llena el nombre y el número de integrantes.')
+    if (!nombrePersona.trim()) {
+      alert('Por favor, llena el nombre del solicitante.')
       return
     }
     
     setEnviando(true)
+    
+    const solicitud_id = crypto.randomUUID();
 
     const solicitudes = listaSolicitud.map(producto => {
       return fetch(`${apiUrl}/api/prestamos`, {
@@ -121,13 +114,15 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
         body: JSON.stringify({
           producto_id: producto.id, 
           nombre_persona: nombrePersona,
-          // --- LÓGICA DE MAESTRO (ENVÍO) ---
-          // Si es maestro, envía null. Si no, envía el número de control.
           numero_de_control: isMaestro ? null : numeroControl, 
-          integrantes: integrantes,
+          
+          // Si es maestro, envía 1. Si es alumno, envía el valor del input.
+          integrantes: isMaestro ? 1 : integrantes, 
+
           cantidad: producto.cantidad,
           materia: materia,
-          grupo: grupo
+          grupo: grupo,
+          solicitud_uuid: solicitud_id
         }),
       })
     })
@@ -147,8 +142,7 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
       setMateria('')
       setGrupo('')
       setSearchTerm('')
-      setUso(false)
-      setIsMaestro(false) // Resetea la casilla de maestro
+      setIsMaestro(false)
 
     } catch (error) {
       console.error('Error en el formulario:', error)
@@ -159,9 +153,11 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
     }
   }
 
-  // --- RENDERIZADO (El formulario completo) ---
+  // --- RENDERIZADO (JSX ACTUALIZADO) ---
   return (
-    <div className="formulario-container"> {/* Usamos un contenedor simple */}
+    <div className="formulario-container">
+      <h2>Registrar Nuevo Préstamo</h2>
+      
       {loading && <p>Cargando lista de equipos...</p>}
 
       {!loading && (
@@ -170,7 +166,6 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
           <fieldset>
             <legend>Datos del Solicitante</legend>
 
-            {/* --- ¡NUEVA FEATURE DE ADMIN! Casilla de Maestro --- */}
             <div className="maestro-check">
               <input 
                 type="checkbox"
@@ -186,7 +181,7 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
               <input type="text" id="nombre" value={nombrePersona} onChange={(e) => setNombrePersona(e.target.value)} placeholder="NOMBRE | APELLIDOS" required />
             </div>
             
-            {/* --- LÓGICA DE MAESTRO: Mostrar solo si NO es maestro --- */}
+            {/* Oculto si es maestro */}
             {!isMaestro && (
               <div>
                 <label htmlFor="control">Número de Control:</label>
@@ -194,12 +189,23 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
               </div>
             )}
 
-            {/* Fila de 3 (Integrantes, Materia, Grupo) */}
             <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="integrantes">Núm. de Integrantes:</label>
-                <input type="number" id="integrantes" value={integrantes} min="1" onChange={(e) => setIntegrantes(parseInt(e.target.value) || 1)} required />
-              </div>
+
+              {/* Oculto si es maestro */}
+              {!isMaestro && (
+                <div className="form-group">
+                  <label htmlFor="integrantes">Núm. de Integrantes:</label>
+                  <input 
+                    type="number" 
+                    id="integrantes"
+                    value={integrantes}
+                    min="1"
+                    onChange={(e) => setIntegrantes(parseInt(e.target.value) || 1)}
+                    required={!isMaestro} // Solo requerido si no es maestro
+                  />
+                </div>
+              )}
+              
               <div className="form-group">
                 <label htmlFor="materia">Materia (Opcional):</label>
                 <input type="text" id="materia" value={materia} onChange={(e) => setMateria(e.target.value)} placeholder="Ej. Circuitos Eléctricos" />
@@ -209,35 +215,10 @@ function RegistrarPrestamo({ apiUrl }: PrestamosProps) {
                 <input type="text" id="grupo" value={grupo} onChange={(e) => setGrupo(e.target.value)} placeholder="Ej. 5CV1" />
               </div>
             </div>
-
-           <div className="terminos-container">
-              <input type="checkbox" id="Uso" checked={terminosUso} onChange={(e) => setUso(e.target.checked)} required />
-              <label htmlFor="Uso"> 
-                <span className="link-reglamento" onClick={(e) => { e.preventDefault(); setModalAbierto(true); }}>
-                  Acepto el reglamento de préstamos de equipo
-                </span>
-              </label>
-            </div>
-            {modalAbierto && (
-              <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h2>Reglamento de Uso y Obligaciones</h2>
-                  {/* ... Pega tus reglas aquí ... */}
-                  <ol>
-                    <li>Regla 1...</li>
-                    <li>Regla 2...</li>
-                  </ol>
-                  <button type="button" className="modal-close-btn" onClick={() => setModalAbierto(false)}>
-                    Entendido y Cerrar
-                  </button>
-                </div>
-              </div>
-            )}
           </fieldset>
           
           <fieldset>
             <legend>Equipos a Solicitar</legend>
-            {/* ... (todo el código de búsqueda y lista de solicitud) ... */}
             <label htmlFor="busqueda">Herramienta / Equipo:</label>
             <input type="text" id="busqueda" value={searchTerm} onChange={handleSearch} placeholder="Escribe el nombre de la herramienta o equipo" />
             <div className="search-results">

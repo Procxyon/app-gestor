@@ -1,68 +1,292 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx'; // Importa la librería de Excel
 
-// Define la estructura de tus datos
+// --- Interfaces ---
 interface Producto {
   id: number;
   nombre_equipo: string;
-  descripcion: string;
-  unidades_totales: number;
+  descripcion: string; 
+  unidades_totales: number; 
+  unidades_prestadas: number; 
+  loan_count: number;         
+  visible: number; // Columna de visibilidad
 }
 
 interface InventarioProps {
-  apiUrl: string;
+  apiUrl: string; 
 }
 
 function Inventario({ apiUrl }: InventarioProps) {
-  const [productos, setProductos] = useState<Producto[]>([])
-  const [loading, setLoading] = useState(true)
+  const [productosOriginales, setProductosOriginales] = useState<Producto[]>([]);
+  const [productosEditados, setProductosEditados] = useState<Producto[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [idEditando, setIdEditando] = useState<number | null>(null);
+  const [hayCambios, setHayCambios] = useState(false);
+  const refsInputs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importando, setImportando] = useState(false);
 
-  // Función para cargar los datos desde la API (tu Worker)
+  // --- Carga Inicial ---
   const fetchInventario = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch(`${apiUrl}/api/inventario`)
-      const data = await response.json()
-      setProductos(data)
-    } catch (error) {
-      console.error('Error al cargar inventario:', error)
+      setCargando(true);
+      try {
+        const respuesta = await fetch(`${apiUrl}/api/inventario`); // Pide TODOS los items
+        if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+        const data: Producto[] = await respuesta.json(); 
+        setProductosOriginales(data); 
+        setProductosEditados(data);   
+        setHayCambios(false);       
+        setIdEditando(null);         
+      } catch (error) {
+        console.error('Error al cargar inventario:', error);
+        alert(`Falló la carga del inventario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      }
+      setCargando(false);
+  };
+
+  useEffect(() => {
+    fetchInventario();
+  }, [apiUrl]);
+
+  // --- Funciones de Edición ---
+  const handleDobleClick = (id: number) => {
+    setIdEditando(id);
+    setTimeout(() => { refsInputs.current[`nombre-${id}`]?.focus(); refsInputs.current[`nombre-${id}`]?.select(); }, 50);
+  };
+
+  const handleCambioInput = (id: number, campo: keyof Producto, valor: string | number) => {
+    if (campo !== 'nombre_equipo' && campo !== 'unidades_totales') return;
+    const valorProcesado = campo === 'unidades_totales' ? (parseInt(valor as string, 10) || 0) : valor;
+    setProductosEditados(prev => prev.map(p => (p.id === id ? { ...p, [campo]: valorProcesado } : p)));
+    setHayCambios(true); 
+  };
+
+  const handleTeclaAbajo = (e: React.KeyboardEvent<HTMLInputElement>, id: number, campoActual: 'nombre' | 'unidades') => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (campoActual === 'nombre') { refsInputs.current[`unidades-${id}`]?.focus(); refsInputs.current[`unidades-${id}`]?.select(); } 
+      else if (campoActual === 'unidades') {
+        const indiceActual = productosEditados.findIndex(p => p.id === id);
+        const siguienteProducto = productosEditados[indiceActual + 1];
+        if (siguienteProducto) {
+          setIdEditando(siguienteProducto.id); 
+           setTimeout(() => { refsInputs.current[`nombre-${siguienteProducto.id}`]?.focus(); refsInputs.current[`nombre-${siguienteProducto.id}`]?.select(); }, 50);
+        } else { setIdEditando(null); }
+      }
+    } else if (e.key === 'Escape') {
+        setProductosEditados(prev => prev.map(p => (p.id === id ? productosOriginales.find(op => op.id === id) || p : p)));
+        setIdEditando(null);
+        setHayCambios(productosEditados.some((productoEditado, index) => JSON.stringify(productoEditado) !== JSON.stringify(productosOriginales[index]) && productoEditado.id !== id));
     }
-    setLoading(false)
+  };
+
+  // --- Guardar Cambios ---
+  const handleGuardarCambios = async () => {
+    setIdEditando(null); 
+    setGuardando(true);
+    const cambios: Producto[] = [];
+    let validationError = false; // Flag para detener si hay error
+
+    productosEditados.forEach(productoEditado => {
+        if (validationError) return; // Si ya hubo un error, no procesar más
+        const productoOriginal = productosOriginales.find(p => p.id === productoEditado.id);
+        const unidadesOriginales = productoOriginal ? Number(productoOriginal.unidades_totales) : undefined;
+        const unidadesEditadas = Number(productoEditado.unidades_totales);
+
+        if (productoOriginal && (productoEditado.nombre_equipo !== productoOriginal.nombre_equipo || unidadesEditadas !== unidadesOriginales)) {
+            if (!isNaN(unidadesEditadas) && unidadesEditadas >= 0) {
+                cambios.push({ ...productoEditado, unidades_totales: unidadesEditadas });
+            } else {
+                alert(`Error: Cantidad inválida para '${productoEditado.nombre_equipo}'.`);
+                validationError = true; // Marcar que hubo error
+            }
+        }
+    });
+
+    // Si hubo error de validación, detener aquí
+    if (validationError) {
+        setGuardando(false);
+        return; 
+    }
+
+    if (cambios.length === 0) {
+        setGuardando(false);
+        setHayCambios(false);
+        alert("No se detectaron cambios para guardar.");
+        return;
+    }
+
+    const promesasUpdate = cambios.map(cambio => fetch(`${apiUrl}/api/inventario/${cambio.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre_equipo: cambio.nombre_equipo, unidades_totales: cambio.unidades_totales }), }));
+
+    try {
+        const respuestas = await Promise.all(promesasUpdate);
+        const updatesFallidos = respuestas.filter(res => !res.ok);
+        if (updatesFallidos.length > 0) { const mensajesError = await Promise.all(updatesFallidos.map(async (res) => { try { const errData = await res.json(); return `ID ${res.url.split('/').pop()}: ${errData.err || res.statusText}`; } catch { return `ID ${res.url.split('/').pop()}: ${res.statusText}`; }})); throw new Error(`Fallaron las actualizaciones:\n${mensajesError.join('\n')}`); }
+        alert(`¡${cambios.length} item(s) actualizados con éxito!`);
+        await fetchInventario(); // Recarga los datos frescos
+    } catch (error) {
+        console.error('Error al guardar cambios:', error);
+        if (error instanceof Error) { alert(`Error al guardar: ${error.message}.`); } 
+        else { alert('Ocurrió un error desconocido al guardar.'); }
+    } finally {
+        setGuardando(false);
+    }
+  };
+
+
+   // --- Cancelar Cambios ---
+   const handleCancelarCambios = () => {
+        if (hayCambios && window.confirm("¿Descartar cambios no guardados?")) {
+            setProductosEditados(productosOriginales); 
+            setHayCambios(false);
+            setIdEditando(null);
+        } else if (!hayCambios){
+            setIdEditando(null);
+        }
+   };
+
+  // --- Exportar a Excel ---
+  const handleExportXLS = () => {
+    if (productosOriginales.length === 0) { alert("No hay datos para exportar."); return; }
+    const dataToExport = productosOriginales.map(p => ({ ID: p.id, NombreEquipo: p.nombre_equipo, Descripcion: p.descripcion, UnidadesTotales: p.unidades_totales, UnidadesPrestadas: p.unidades_prestadas, VecesPrestado: p.loan_count, Visible: p.visible === 1 ? 'Sí' : 'No' })); // Añade Visible
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    ws['!cols'] = [ { wch: 5 }, { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }]; // Ajusta anchos
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+    XLSX.writeFile(wb, "inventario.xlsx");
   }
 
-  // Carga los datos cuando el componente aparece
-  useEffect(() => {
-    fetchInventario()
-  }, [])
+  // --- Manejar Cambio de Archivo ---
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) { handleImportCSV(file); }
+    if (fileInputRef.current) { fileInputRef.current.value = ""; }
+  }
 
-  if (loading) return <p>Cargando inventario...</p>
+  // --- Importar desde CSV ---
+  const handleImportCSV = (file: File) => {
+    if (!window.confirm("IMPORTANTE: Esto reemplazará TODO el inventario actual. ¿Continuar?")) return;
+    setImportando(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      if (!text) { alert("Error al leer archivo."); setImportando(false); return; }
+      try {
+        const workbook = XLSX.read(text, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+        if (jsonData.length < 2) throw new Error("Archivo CSV vacío o sin datos.");
+        const headers = (jsonData[0] as string[]).map(h => h.trim().toLowerCase());
+        const dataRows = jsonData.slice(1);
+        const itemsToImport = dataRows.map(rowArray => { /* ... mapeo de cabeceras ... */ const row = rowArray as (string|number)[]; let item: {[key: string]: any} = {}; headers.forEach((header, index) => { let key = header; if (header === 'nombre' || header === 'nombre equipo' || header === 'name') key = 'nombre_equipo'; if (header === 'descripcion' || header === 'descripción') key = 'descripcion'; if (header === 'total' || header === 'cantidad' || header === 'unidades totales' || header === 'unidadestotales') key = 'unidades_totales'; item[key] = row[index]; }); return item; });
+        const response = await fetch(`${apiUrl}/api/inventario/import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(itemsToImport) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.err || `Error: ${response.statusText}`);
+        alert(result.message || "Importación completada.");
+        await fetchInventario(); 
+      } catch (error) {
+        console.error("Error al importar CSV:", error);
+        alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}. Revisa formato.`);
+      } finally { setImportando(false); }
+    };
+    reader.onerror = () => { alert("Error al leer archivo."); setImportando(false); };
+    reader.readAsText(file);
+  }
+  
+  // --- Cambiar Visibilidad ---
+  const handleToggleVisibilidad = async (id: number) => {
+      const originalVisibilityMap = new Map(productosEditados.map(p => [p.id, p.visible]));
+      setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: p.visible === 1 ? 0 : 1} : p));
+      try {
+          const response = await fetch(`${apiUrl}/api/inventario/${id}/toggle-visibility`, { method: 'PUT' });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.err || 'Error al cambiar visibilidad');
+          setProductosOriginales(prev => prev.map(p => p.id === id ? {...p, visible: result.visible} : p));
+      } catch (error) {
+          console.error("Error al cambiar visibilidad:", error);
+          alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: originalVisibilityMap.get(id) ?? p.visible} : p));
+      }
+  }
+
+  // --- Renderizado ---
+  if (cargando) return <p>Cargando inventario...</p>;
 
   return (
-    <div>
+    <div className="inventario-container">
       <h2>Gestión de Inventario</h2>
-      {/* Aquí puedes poner un formulario para AÑADIR productos */}
-      
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nombre Equipo</th>
-            <th>Descripción</th>
-            <th>Unidades Totales</th>
-          </tr>
-        </thead>
-        <tbody>
-          {productos.map((producto) => (
-            <tr key={producto.id}>
-              <td>{producto.id}</td>
-              <td>{producto.nombre_equipo}</td>
-              <td>{producto.descripcion}</td>
-              <td>{producto.unidades_totales}</td>
+      <p>Haz doble clic en Nombre o U. Totales para editar. Enter para moverte. Esc para cancelar fila.</p>
+
+      {/* Botones Guardar/Cancelar */}
+      {hayCambios && (
+        <div className="save-actions">
+           <button onClick={handleGuardarCambios} disabled={guardando} className="save-btn"> {guardando ? 'Guardando...' : 'Guardar Cambios'} </button>
+           <button onClick={handleCancelarCambios} disabled={guardando} className="cancel-btn"> Cancelar </button>
+        </div>
+      )}
+
+      {/* Botones Exportar/Importar */}
+      <div className="import-export-actions">
+        <button onClick={handleExportXLS} disabled={guardando || importando || hayCambios} className="export-btn" title={hayCambios ? "Guarda o cancela cambios antes de exportar" : ""}> Exportar a Excel (.xlsx) </button>
+        <label htmlFor="csv-input" className={`import-btn ${importando || hayCambios ? 'disabled' : ''}`} title={hayCambios ? "Guarda o cancela cambios antes de importar" : ""}> {importando ? 'Importando...' : 'Importar desde CSV'} </label>
+        <input ref={fileInputRef} id="csv-input" type="file" accept=".csv" onChange={handleFileChange} style={{ display: 'none' }} disabled={importando || hayCambios} />
+        <small>(Reemplaza todo el inventario)</small>
+      </div>
+
+      {/* Tabla */}
+      <div className="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre Equipo</th>
+              <th>Descripción</th>
+              <th>Unidades Totales</th>
+              <th>Prestadas Actual.</th> 
+              <th>Diferencia</th> {/* <-- ¡RESTAURADO! */}       
+              <th>Veces Prestado</th>    
+              <th>Visible (App Solicitud)</th> 
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {productosEditados.map((producto) => {
+              // --- ¡CÁLCULO DE DIFERENCIA RESTAURADO! ---
+              const diferencia = producto.unidades_totales - producto.unidades_prestadas;
+              const isEditing = idEditando === producto.id;
+              return (
+                <tr key={producto.id} className={isEditing ? 'editing-row' : ''}>
+                  <td>{producto.id}</td>
+                  <td onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
+                    {isEditing ? ( <input ref={el => refsInputs.current[`nombre-${producto.id}`] = el} type="text" value={producto.nombre_equipo} onChange={(e) => handleCambioInput(producto.id, 'nombre_equipo', e.target.value)} onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'nombre')} onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} /> ) : ( producto.nombre_equipo )}
+                  </td>
+                  <td>{producto.descripcion}</td>
+                  <td onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
+                    {isEditing ? ( <input ref={el => refsInputs.current[`unidades-${producto.id}`] = el} type="number" min="0" value={producto.unidades_totales} onChange={(e) => handleCambioInput(producto.id, 'unidades_totales', e.target.value)} onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'unidades')} onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} /> ) : ( producto.unidades_totales )}
+                  </td>
+                  <td>{producto.unidades_prestadas}</td>
+
+                  {/* --- ¡CELDA DE DIFERENCIA RESTAURADA! --- */}
+                  <td className={`diferencia ${diferencia < 0 ? 'negativa' : diferencia > 0 ? 'positiva' : ''}`}>
+                      {diferencia}
+                      {/* Indicador visual si es negativo (faltan físicamente) */}
+                      {diferencia < 0 ? ' (!)' : ''} 
+                  </td>
+
+                  <td>{producto.loan_count}</td>
+                  <td className="visibility-cell">
+                    <span className={`status-badge ${producto.visible === 1 ? 'visible' : 'oculto'}`}> {producto.visible === 1 ? 'Visible' : 'Oculto'} </span>
+                    <button onClick={() => handleToggleVisibilidad(producto.id)} className="toggle-visibility-btn" title={producto.visible === 1 ? 'Ocultar' : 'Mostrar'}> {producto.visible === 1 ? '👁️ Ocultar' : '👁️‍🗨️ Mostrar'} </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
-  )
+  );
 }
 
-export default Inventario
+export default Inventario;
