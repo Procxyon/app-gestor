@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 
-// --- ¡INTERFAZ ACTUALIZADA! ---
 interface Prestamo {
   id: number;
   producto_id: number;
@@ -14,14 +13,13 @@ interface Prestamo {
   materia: string | null;
   grupo: string | null;
   integrantes: number;
-  solicitud_uuid: string | null; // <-- ¡NUEVO VÍNCULO!
+  solicitud_uuid: string | null;
 }
 
 interface PrestamosProps {
   apiUrl: string;
 }
 
-// Datos para el formulario (solo datos compartidos)
 type EditFormData = {
   nombre_persona: string;
   id_persona: string | null;
@@ -38,7 +36,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
   const [enviandoModificacion, setEnviandoModificacion] = useState(false)
 
-  // fetchPrestamos ya está actualizado por el backend (obtiene solicitud_uuid)
+  // Cargar Préstamos
   const fetchPrestamos = async () => {
     setLoading(true)
     try {
@@ -55,39 +53,27 @@ function Prestamos({ apiUrl }: PrestamosProps) {
 
   useEffect(() => { fetchPrestamos() }, [apiUrl])
 
-  // handleDevolucion (sin cambios)
+  // --- Devolver UN (1) Item ---
+  // (Esta es la función del botón en la fila)
   const handleDevolucion = async (prestamoId: number) => {
-    if (!window.confirm('¿Seguro?')) return;
+    if (!window.confirm('¿Devolver este item individual?')) return;
     try {
+      // Llama a la ruta de DEVOLVER POR ID
       const response = await fetch(`${apiUrl}/api/prestamos/${prestamoId}/devolver`, { method: 'PUT' })
       if (!response.ok) throw new Error('Error al registrar la devolución')
-      alert('¡Devolución registrada!')
+      alert('¡Devolución de item registrada!')
       fetchPrestamos() 
     } catch (error) {
       if (error instanceof Error) alert(`Error: ${error.message}`)
     }
   }
 
-  // handleExportCSV (sin cambios)
+  // Exportar (sin cambios)
   const handleExportCSV = () => {
+    // ... (Tu código de exportar CSV va aquí, sin cambios) ...
     if (prestamos.length === 0) return;
-    const headers = [
-      "ID", "Solicitud_UUID", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", 
-      "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución"
-    ];
-    const rows = prestamos.map(p => [
-      p.id,
-      p.solicitud_uuid || 'N/A', // <-- Exportamos el nuevo UUID
-      p.nombre_equipo.replace(/,/g, ''),
-      p.cantidad,
-      p.nombre_persona.replace(/,/g, ''),
-      p.id_persona || 'Maestro',
-      p.integrantes,
-      p.materia || 'N/A',
-      p.grupo || 'N/A',
-      new Date(p.fecha_prestamo).toLocaleString(),
-      p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : 'Pendiente'
-    ].join(','));
+    const headers = ["ID", "Solicitud_UUID", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución"];
+    const rows = prestamos.map(p => [p.id, p.solicitud_uuid || 'N/A', p.nombre_equipo.replace(/,/g, ''), p.cantidad, p.nombre_persona.replace(/,/g, ''), p.id_persona || 'Maestro', p.integrantes, p.materia || 'N/A', p.grupo || 'N/A', new Date(p.fecha_prestamo).toLocaleString(), p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : 'Pendiente'].join(','));
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -98,8 +84,9 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     document.body.removeChild(link);
   }
 
-  // handleDeleteAll (sin cambios)
+  // Borrar Todo (sin cambios)
   const handleDeleteAll = async () => {
+    // ... (Tu código de borrar todo va aquí, sin cambios) ...
     if (!window.confirm("¿BORRAR TODO?")) return;
     if (!window.confirm("¡¡ADVERTENCIA FINAL!! ¿CONTINUAR?")) return;
     try {
@@ -112,14 +99,13 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     }
   }
 
-  // handleOpenModalModificar (¡Actualizado!)
+  // Abrir Modal (sin cambios)
   const handleOpenModalModificar = (prestamo: Prestamo) => {
     if (!prestamo.solicitud_uuid) {
       alert("Error: Este es un préstamo antiguo sin 'ID de Solicitud'. No se puede modificar en cadena.");
       return;
     }
     setPrestamoSeleccionado(prestamo);
-    // Pre-llena el formulario solo con datos compartidos
     setEditFormData({
       nombre_persona: prestamo.nombre_persona,
       id_persona: prestamo.id_persona,
@@ -130,49 +116,63 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     setModalModificarAbierto(true);
   }
 
-  // handleEditFormChange (sin cambios, maneja los inputs)
+  // Input Change (sin cambios)
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditFormData(prev => prev ? ({ ...prev, [name]: value }) : null);
   }
 
-  // --- ¡handleUpdatePrestamo (Totalmente Actualizado!) ---
+  // Enviar Modificación (sin cambios)
   const handleUpdatePrestamo = async (e: FormEvent) => {
     e.preventDefault();
-    if (!editFormData || !prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) {
-      alert("Error: No se encontró el ID de la solicitud.");
-      return;
-    }
-    
+    if (!editFormData || !prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) return;
     setEnviandoModificacion(true);
     try {
-      // Llama a la NUEVA ruta del backend
+      // Llama a la ruta de MODIFICAR POR UUID
       const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData) // Envía solo los datos compartidos
+        body: JSON.stringify(editFormData)
       });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.err || 'Error al actualizar');
-      }
-
-      alert('¡Solicitud actualizada! (Todos los items vinculados fueron modificados)');
+      if (!response.ok) throw new Error('Error al actualizar');
+      alert('¡Solicitud actualizada!');
       setModalModificarAbierto(false);
-      setPrestamoSeleccionado(null);
-      fetchPrestamos(); // Recarga el historial
-
+      fetchPrestamos();
     } catch (error) {
-      console.error('Error al modificar:', error);
       if (error instanceof Error) alert(`Error: ${error.message}`);
-      else alert('Ocurrió un error desconocido');
     } finally {
       setEnviandoModificacion(false);
     }
   }
 
-  // --- RENDERIZADO (Tabla + Botones + Modal) ---
+  // --- ¡NUEVA FUNCIÓN! ---
+  // --- Devolver TODA la Solicitud (desde el modal) ---
+  const handleDevolverSolicitudCompleta = async () => {
+    if (!prestamoSeleccionado || !prestamoSeleccionado.solicitud_uuid) return;
+    
+    if (!window.confirm(`¿Estás seguro de que quieres devolver TODOS los items pendientes de esta solicitud? (Folio: ...${prestamoSeleccionado.solicitud_uuid.slice(-8)})`)) {
+      return;
+    }
+    
+    setEnviandoModificacion(true); // Re-usamos el estado de "enviando"
+    try {
+      // Llama a la NUEVA ruta de DEVOLVER POR UUID
+      const response = await fetch(`${apiUrl}/api/solicitud/${prestamoSeleccionado.solicitud_uuid}/devolver`, {
+        method: 'PUT'
+      });
+      if (!response.ok) throw new Error('Error al devolver la solicitud');
+      
+      alert('¡Solicitud completa marcada como devuelta!');
+      setModalModificarAbierto(false); // Cierra el modal
+      fetchPrestamos(); // Recarga la tabla
+    } catch (error) {
+       if (error instanceof Error) alert(`Error: ${error.message}`);
+    } finally {
+      setEnviandoModificacion(false);
+    }
+  }
+
+  // --- RENDERIZADO (JSX) ---
   if (loading) return <p>Cargando historial de préstamos...</p>
 
   return (
@@ -182,6 +182,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
       <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
+            {/* ... (Tu <thead> de la tabla se queda igual) ... */}
             <tr>
               <th>Acción</th>
               <th>Estado</th>
@@ -189,7 +190,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
               <th>Cantidad</th>
               <th>Solicitante</th>
               <th>N° Control / Maestro</th>
-              <th>Folio Solicitud (UUID)</th> {/* <-- Nueva columna útil */}
+              <th>Folio Solicitud (UUID)</th>
               <th>Materia</th>
               <th>Grupo</th>
               <th>Fecha Préstamo</th>
@@ -199,22 +200,25 @@ function Prestamos({ apiUrl }: PrestamosProps) {
           <tbody>
             {prestamos.map((prestamo) => (
               <tr key={prestamo.id}>
+                {/* --- CAMBIO EN ONCLICK DE DEVOLVER --- */}
                 <td>
                   {!prestamo.fecha_devolucion && (
-                    <button onClick={() => handleDevolucion(prestamo.id)} className="devolver-btn">
-                      Devolver
+                    // Este botón solo devuelve 1 item
+                    <button onClick={() => handleDevolucion(prestamo.id)} className="devolver-btn"> 
+                      Devolver Item
                     </button>
                   )}
-                  {/* El botón ahora modifica la SOLICITUD, no el item */}
+                  {/* Este botón abre el modal para la solicitud completa */}
                   <button 
                     onClick={() => handleOpenModalModificar(prestamo)} 
                     className="modify-btn"
-                    disabled={!!prestamo.fecha_devolucion || !prestamo.solicitud_uuid} // Deshabilitado si se devolvió O si es antiguo
+                    disabled={!prestamo.solicitud_uuid} // Deshabilitado si es un registro antiguo
                   >
-                    Modificar
+                    Ver Solicitud
                   </button>
                 </td>
                 
+                {/* ... (El resto de tu <tbody> se queda igual) ... */}
                 <td>
                   {prestamo.fecha_devolucion ? (
                     <span style={{ color: 'green', fontWeight: 'bold' }}>Devuelto</span>
@@ -226,13 +230,10 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                 <td>{prestamo.cantidad || 1}</td>
                 <td>{prestamo.nombre_persona}</td>
                 <td>{prestamo.id_persona ? prestamo.id_persona : (<span style={{ fontStyle: 'italic' }}>Maestro</span>)}</td>
-                
-                {/* Nueva columna para ver el "folio" */}
                 <td>{prestamo.solicitud_uuid ? (
                   <span title={prestamo.solicitud_uuid}>{prestamo.solicitud_uuid.substring(0, 8)}...</span>
                   ) : 'N/A'}
                 </td>
-                
                 <td>{prestamo.materia || 'N/A'}</td>
                 <td>{prestamo.grupo || 'N/A'}</td>
                 <td>{new Date(prestamo.fecha_prestamo).toLocaleString()}</td>
@@ -253,17 +254,18 @@ function Prestamos({ apiUrl }: PrestamosProps) {
         </button>
       </div>
 
-      {/* --- MODAL DE MODIFICAR (Actualizado) --- */}
-      {/* Ya no muestra 'cantidad', solo los datos compartidos */}
+      {/* --- MODAL DE MODIFICAR (ACTUALIZADO CON EL NUEVO BOTÓN) --- */}
       {modalModificarAbierto && editFormData && prestamoSeleccionado && (
         <div className="modal-overlay" onClick={() => setModalModificarAbierto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Modificar Solicitud (Folio: ...{prestamoSeleccionado.solicitud_uuid?.substring(28)})</h2>
-            <p><strong>Nota:</strong> Esto modificará los datos de <strong>todos</strong> los equipos en esta solicitud.</p>
-
+            <h2>Gestionar Solicitud (Folio: ...{prestamoSeleccionado.solicitud_uuid?.substring(28)})</h2>
+            
+            {/* Formulario de Modificación */}
             <form onSubmit={handleUpdatePrestamo} className="formulario-prestamo">
+              {/* ... (El fieldset del formulario se queda igual) ... */}
               <fieldset>
                 <legend>Datos de la Solicitud</legend>
+                <p><strong>Nota:</strong> Los cambios aquí afectarán a <strong>todos</strong> los items de esta solicitud.</p>
                 <div>
                   <label htmlFor="edit_nombre_persona">Nombre Solicitante:</label>
                   <input type="text" id="edit_nombre_persona" name="nombre_persona" value={editFormData.nombre_persona} onChange={handleEditFormChange} required />
@@ -272,7 +274,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                   <label htmlFor="edit_id_persona">N° Control (o dejar vacío si es Maestro):</label>
                   <input type="text" id="edit_id_persona" name="id_persona" value={editFormData.id_persona || ''} onChange={handleEditFormChange} />
                 </div>
-                <div className="form-group"> {/* (No necesita .form-row si es solo 1) */}
+                <div className="form-group">
                     <label htmlFor="edit_integrantes">Integrantes:</label>
                     <input type="number" id="edit_integrantes" name="integrantes" value={editFormData.integrantes} min="1" onChange={handleEditFormChange} required />
                 </div>
@@ -287,16 +289,30 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                   </div>
                 </div>
               </fieldset>
+              
+              {/* --- ¡SECCIÓN DE BOTONES ACTUALIZADA! --- */}
               <div className="modal-actions">
-                <button type="button" className="modal-close-btn" onClick={() => setModalModificarAbierto(false)}>
-                  Cancelar
+                {/* Botón 1: Devolver Todo (NUEVO) */}
+                <button 
+                  type="button" 
+                  className="devolver-toda-btn"
+                  onClick={handleDevolverSolicitudCompleta}
+                  disabled={enviandoModificacion}
+                >
+                  Devolver Toda la Solicitud
                 </button>
-                <button type="submit" className="submit-btn" disabled={enviandoModificacion}>
-                  {enviandoModificacion ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
+                
+                {/* Contenedor para los otros 2 botones */}
+                <div>
+                  <button type="button" className="modal-close-btn" onClick={() => setModalModificarAbierto(false)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="submit-btn" disabled={enviandoModificacion}>
+                    {enviandoModificacion ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                </div>
               </div>
             </form>
-            
           </div>
         </div>
       )}

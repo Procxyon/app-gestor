@@ -115,3 +115,40 @@
   margin-top: 20px;
 }
 /* (Usamos .modal-close-btn que ya definiste) */
+
+/* --- Estilos para los botones del Modal --- */
+.modal-actions {
+  display: flex;
+  justify-content: space-between; /* Alinea los botones */
+  align-items: center;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #444; /* Separador */
+}
+
+/* Botón rojo de Devolver Todo */
+.devolver-toda-btn {
+  background-color: #dc3545; /* Rojo peligro */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.devolver-toda-btn:disabled {
+  background-color: #555;
+}
+
+/* (Ajusta el botón de devolver en la fila para que sea más pequeño) */
+.devolver-btn {
+  background-color: #ffc107;
+  color: #000;
+  font-size: 0.8em; /* Más pequeño */
+  padding: 4px 8px;
+}
+.modify-btn {
+  font-size: 0.8em; /* Más pequeño */
+  padding: 4px 8px;
+}
