@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CreatableSelect from 'react-select/creatable';
-import type { MultiValue } from 'react-select';
-import toast from 'react-hot-toast'; // <-- ¡USAMOS TOAST!
+import type { MultiValue } from 'react-select'; // <-- ¡CORRECCIÓN AQUÍ! (Añadido 'type')
+import toast from 'react-hot-toast';
 
 // --- DATOS ESTÁTICOS (CARRERAS Y ASIGNATURAS) ---
 const CARRERAS = [
@@ -74,7 +74,7 @@ function RegistrarPractica({ apiUrl }: RegistrarPracticaProps) {
       if (res.ok) {
         const data = await res.json();
         setNoPractica((data.ultimo_no_practica || 0) + 1);
-        toast(`Siguiente práctica: #${(data.ultimo_no_practica || 0) + 1}`, { icon: '🔢' }); // <-- TOAST INFO
+        toast(`Siguiente práctica: #${(data.ultimo_no_practica || 0) + 1}`, { icon: '🔢' });
       }
     } catch (error) { console.error("Error al obtener última práctica:", error); }
   };
@@ -102,15 +102,14 @@ function RegistrarPractica({ apiUrl }: RegistrarPracticaProps) {
       const response = await fetch(`${apiUrl}/api/practicas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
       if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.err || 'Error al registrar'); }
       
-      toast.success("¡Práctica registrada con éxito!"); // <-- TOAST ÉXITO
+      toast.success("¡Práctica registrada con éxito!");
       setNombrePractica(''); setObjetivo(''); setObservaciones(''); setSelectedEquipos([]); setSelectedMateriales([]); setNoPractica(prev => prev + 1);
     } catch (error) {
       console.error("Error al enviar:", error);
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Desconocido'}`); // <-- TOAST ERROR
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Desconocido'}`);
     } finally { setLoading(false); }
   };
 
-  // ... (RENDERIZADO IGUAL QUE ANTES, no cambia el JSX) ...
   return (
     <div className="formulario-container">
       <h2>Registrar Nueva Práctica</h2>
