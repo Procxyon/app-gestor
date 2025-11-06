@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx'; 
+import toast from 'react-hot-toast'; // <-- ¡USAMOS TOAST!
 
 // --- Interfaces ---
 interface Producto {
@@ -40,7 +41,7 @@ function Inventario({ apiUrl }: InventarioProps) {
         setIdEditando(null);         
       } catch (error) {
         console.error('Error al cargar inventario:', error);
-        alert(`Falló la carga del inventario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        toast.error("No se pudo cargar el inventario."); // <-- TOAST
       }
       setCargando(false);
   };
@@ -98,7 +99,7 @@ function Inventario({ apiUrl }: InventarioProps) {
             if (!isNaN(unidadesEditadas) && unidadesEditadas >= 0) {
                 cambios.push({ ...productoEditado, unidades_totales: unidadesEditadas });
             } else {
-                alert(`Error: Cantidad inválida para '${productoEditado.nombre_equipo}'.`);
+                toast.error(`Cantidad inválida para '${productoEditado.nombre_equipo}'`); // <-- TOAST
                 validationError = true; 
             }
         }
@@ -112,7 +113,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     if (cambios.length === 0) {
         setGuardando(false);
         setHayCambios(false);
-        alert("No se detectaron cambios para guardar.");
+        toast('No hay cambios para guardar.', { icon: 'ℹ️' }); // <-- TOAST INFO
         return;
     }
 
@@ -121,13 +122,13 @@ function Inventario({ apiUrl }: InventarioProps) {
     try {
         const respuestas = await Promise.all(promesasUpdate);
         const updatesFallidos = respuestas.filter(res => !res.ok);
-        if (updatesFallidos.length > 0) { const mensajesError = await Promise.all(updatesFallidos.map(async (res) => { try { const errData = await res.json(); return `ID ${res.url.split('/').pop()}: ${errData.err || res.statusText}`; } catch { return `ID ${res.url.split('/').pop()}: ${res.statusText}`; }})); throw new Error(`Fallaron las actualizaciones:\n${mensajesError.join('\n')}`); }
-        alert(`¡${cambios.length} item(s) actualizados con éxito!`);
+        if (updatesFallidos.length > 0) { throw new Error(`Fallaron ${updatesFallidos.length} actualizaciones`); }
+        
+        toast.success(`¡${cambios.length} item(s) actualizados!`); // <-- TOAST ÉXITO
         await fetchInventario(); 
     } catch (error) {
         console.error('Error al guardar cambios:', error);
-        if (error instanceof Error) { alert(`Error al guardar: ${error.message}.`); } 
-        else { alert('Ocurrió un error desconocido al guardar.'); }
+        toast.error("Ocurrió un error al guardar los cambios."); // <-- TOAST ERROR
     } finally {
         setGuardando(false);
     }
@@ -139,6 +140,7 @@ function Inventario({ apiUrl }: InventarioProps) {
             setProductosEditados(productosOriginales); 
             setHayCambios(false);
             setIdEditando(null);
+            toast('Cambios descartados', { icon: '🗑️' }); // <-- TOAST
         } else if (!hayCambios){
             setIdEditando(null);
         }
@@ -146,13 +148,14 @@ function Inventario({ apiUrl }: InventarioProps) {
 
   // --- Exportar a Excel ---
   const handleExportXLS = () => {
-    if (productosOriginales.length === 0) { alert("No hay datos para exportar."); return; }
+    if (productosOriginales.length === 0) { toast.error("No hay datos para exportar."); return; } // <-- TOAST
     const dataToExport = productosOriginales.map(p => ({ ID: p.id, NombreEquipo: p.nombre_equipo, Descripcion: p.descripcion, UnidadesTotales: p.unidades_totales, UnidadesPrestadas: p.unidades_prestadas, VecesPrestado: p.loan_count, Visible: p.visible === 1 ? 'Sí' : 'No' })); 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     ws['!cols'] = [ { wch: 5 }, { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }]; 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventario");
     XLSX.writeFile(wb, "inventario.xlsx");
+    toast.success("Inventario exportado correctamente"); // <-- TOAST
   }
 
   // --- Manejar Cambio de Archivo ---
@@ -167,9 +170,15 @@ function Inventario({ apiUrl }: InventarioProps) {
     if (!window.confirm("IMPORTANTE: Esto reemplazará TODO el inventario actual. ¿Continuar?")) return;
     setImportando(true);
     const reader = new FileReader();
+    
+    const loadingToast = toast.loading("Importando inventario..."); // <-- TOAST DE CARGA
+
     reader.onload = async (e) => {
       const text = e.target?.result as string;
-      if (!text) { alert("Error al leer archivo."); setImportando(false); return; }
+      if (!text) { 
+          toast.error("Error al leer archivo.", { id: loadingToast }); 
+          setImportando(false); return; 
+      }
       try {
         const workbook = XLSX.read(text, { type: 'string' });
         const sheetName = workbook.SheetNames[0];
@@ -179,17 +188,24 @@ function Inventario({ apiUrl }: InventarioProps) {
         const headers = (jsonData[0] as string[]).map(h => h.trim().toLowerCase());
         const dataRows = jsonData.slice(1);
         const itemsToImport = dataRows.map(rowArray => { const row = rowArray as (string|number)[]; let item: {[key: string]: any} = {}; headers.forEach((header, index) => { let key = header; if (header === 'nombre' || header === 'nombre equipo' || header === 'name') key = 'nombre_equipo'; if (header === 'descripcion' || header === 'descripción') key = 'descripcion'; if (header === 'total' || header === 'cantidad' || header === 'unidades totales' || header === 'unidadestotales') key = 'unidades_totales'; item[key] = row[index]; }); return item; });
+        
         const response = await fetch(`${apiUrl}/api/inventario/import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(itemsToImport) });
         const result = await response.json();
+        
         if (!response.ok) throw new Error(result.err || `Error: ${response.statusText}`);
-        alert(result.message || "Importación completada.");
+        
+        toast.success(result.message || "Importación completada.", { id: loadingToast }); // <-- ACTUALIZA TOAST
         await fetchInventario(); 
+
       } catch (error) {
         console.error("Error al importar CSV:", error);
-        alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}. Revisa formato.`);
+        toast.error("Error durante la importación. Revisa el formato CSV.", { id: loadingToast });
       } finally { setImportando(false); }
     };
-    reader.onerror = () => { alert("Error al leer archivo."); setImportando(false); };
+    reader.onerror = () => { 
+        toast.error("Error al leer archivo.", { id: loadingToast }); 
+        setImportando(false); 
+    };
     reader.readAsText(file);
   }
   
@@ -202,9 +218,10 @@ function Inventario({ apiUrl }: InventarioProps) {
           const result = await response.json();
           if (!response.ok) throw new Error(result.err || 'Error al cambiar visibilidad');
           setProductosOriginales(prev => prev.map(p => p.id === id ? {...p, visible: result.visible} : p));
+          toast.success("Visibilidad actualizada"); // <-- TOAST
       } catch (error) {
           console.error("Error al cambiar visibilidad:", error);
-          alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          toast.error("Error al cambiar visibilidad"); // <-- TOAST
           setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: originalVisibilityMap.get(id) ?? p.visible} : p));
       }
   }
@@ -256,38 +273,14 @@ function Inventario({ apiUrl }: InventarioProps) {
                 <tr key={producto.id} className={isEditing ? 'editing-row' : ''}>
                   <td>{producto.id}</td>
                   <td onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
-                    {isEditing ? ( 
-                      // --- ¡CORRECCIÓN AQUÍ! ---
-                      <input 
-                        ref={el => { refsInputs.current[`nombre-${producto.id}`] = el; }} 
-                        type="text" 
-                        value={producto.nombre_equipo} 
-                        onChange={(e) => handleCambioInput(producto.id, 'nombre_equipo', e.target.value)} 
-                        onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'nombre')} 
-                        onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} 
-                      /> 
-                    ) : ( producto.nombre_equipo )}
+                    {isEditing ? ( <input ref={el => { refsInputs.current[`nombre-${producto.id}`] = el; }} type="text" value={producto.nombre_equipo} onChange={(e) => handleCambioInput(producto.id, 'nombre_equipo', e.target.value)} onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'nombre')} onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} /> ) : ( producto.nombre_equipo )}
                   </td>
                   <td>{producto.descripcion}</td>
                   <td onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
-                    {isEditing ? ( 
-                      // --- ¡CORRECCIÓN AQUÍ! ---
-                      <input 
-                        ref={el => { refsInputs.current[`unidades-${producto.id}`] = el; }} 
-                        type="number" 
-                        min="0" 
-                        value={producto.unidades_totales} 
-                        onChange={(e) => handleCambioInput(producto.id, 'unidades_totales', e.target.value)} 
-                        onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'unidades')} 
-                        onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} 
-                      /> 
-                    ) : ( producto.unidades_totales )}
+                    {isEditing ? ( <input ref={el => { refsInputs.current[`unidades-${producto.id}`] = el; }} type="number" min="0" value={producto.unidades_totales} onChange={(e) => handleCambioInput(producto.id, 'unidades_totales', e.target.value)} onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'unidades')} onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} /> ) : ( producto.unidades_totales )}
                   </td>
                   <td>{producto.unidades_prestadas}</td>
-                  <td className={`diferencia ${diferencia < 0 ? 'negativa' : diferencia > 0 ? 'positiva' : ''}`}>
-                      {diferencia}
-                      {diferencia < 0 ? ' (!)' : ''} 
-                  </td>
+                  <td className={`diferencia ${diferencia < 0 ? 'negativa' : diferencia > 0 ? 'positiva' : ''}`}> {diferencia} {diferencia < 0 ? ' (!)' : ''} </td>
                   <td>{producto.loan_count}</td>
                   <td className="visibility-cell">
                     <span className={`status-badge ${producto.visible === 1 ? 'visible' : 'oculto'}`}> {producto.visible === 1 ? 'Visible' : 'Oculto'} </span>

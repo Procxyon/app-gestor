@@ -1,68 +1,69 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+import { useState } from 'react'
+import Inventario from './components/Inventario'
+import Prestamos from './components/Prestamos'
+import RegistrarPrestamo from './components/RegistrarPrestamo'
+// --- ¡NUEVA IMPORTACIÓN! ---
+import RegistrarPractica from './components/RegistrarPractica'
+import './App.css'
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+const API_URL = 'https://api-inventario.dejesus-ramirez-josue.workers.dev'
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+// Ahora tenemos 4 vistas
+type Vista = 'inventario' | 'prestamos' | 'registrar' | 'practica'
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+function App() {
+  const [vista, setVista] = useState<Vista>('inventario')
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+  const cambiarVista = (nuevaVista: Vista) => {
+    setVista(nuevaVista);
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+
+  return (
+    <div className="admin-panel">
+      
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <h3>Panel de Admin</h3>
+        </div>
+        <nav className="sidebar-nav">
+          <button 
+            onClick={() => cambiarVista('inventario')}
+            className={vista === 'inventario' ? 'active' : ''}
+          >
+            Inventario
+          </button>
+          <button 
+            onClick={() => cambiarVista('prestamos')}
+            className={vista === 'prestamos' ? 'active' : ''}
+          >
+            Historial Préstamos
+          </button>
+          <button 
+            onClick={() => cambiarVista('registrar')}
+            className={vista === 'registrar' ? 'active' : ''}
+          >
+            Registrar Préstamo (Alumno)
+          </button>
+          {/* --- ¡NUEVO BOTÓN! --- */}
+          <button 
+            onClick={() => cambiarVista('practica')}
+            className={vista === 'practica' ? 'active' : ''}
+          >
+            Registrar Práctica (Profesor)
+          </button>
+        </nav>
+      </aside>
+
+      <main className="content">
+        {vista === 'inventario' && <Inventario apiUrl={API_URL} />}
+        {vista === 'prestamos' && <Prestamos apiUrl={API_URL} />}
+        {vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
+        {/* --- ¡NUEVO COMPONENTE! --- */}
+        {vista === 'practica' && <RegistrarPractica apiUrl={API_URL} />}
+      </main>
+      
+    </div>
+  )
 }
+
+export default App

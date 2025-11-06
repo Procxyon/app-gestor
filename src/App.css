@@ -579,3 +579,15 @@ body, html {
     color: #888;
     margin-left: 5px;
 }
+
+.formulario-prestamo select,
+.formulario-prestamo textarea {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #333;
+  color: #eee;
+  font-family: Arial, sans-serif; /* Para que coincida con el resto */
+}

@@ -1,29 +1,41 @@
 import { useState } from 'react'
+import { Toaster } from 'react-hot-toast'; // <-- ¡NUEVO!
 import Inventario from './components/Inventario'
 import Prestamos from './components/Prestamos'
-import RegistrarPrestamo from './components/RegistrarPrestamo' 
-import './App.css' // Importamos los estilos
+import RegistrarPrestamo from './components/RegistrarPrestamo'
+import RegistrarPractica from './components/RegistrarPractica'
+import './App.css'
 
-// La URL de tu API
 const API_URL = 'https://api-inventario.dejesus-ramirez-josue.workers.dev'
 
-// Definimos los 3 tipos de vistas
-type Vista = 'inventario' | 'prestamos' | 'registrar'
+type Vista = 'inventario' | 'prestamos' | 'registrar' | 'practica'
 
 function App() {
-  // El estado ahora empieza en 'inventario' y tiene 3 opciones
   const [vista, setVista] = useState<Vista>('inventario')
 
-  // Función para cambiar de vista (la usaremos en los botones)
   const cambiarVista = (nuevaVista: Vista) => {
     setVista(nuevaVista);
   }
 
   return (
-    // Contenedor principal del panel
     <div className="admin-panel">
-      
-      {/* --- 1. BARRA LATERAL (SIDEBAR) --- */}
+      {/* --- CONFIGURACIÓN DE LAS NOTIFICACIONES --- */}
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+          success: {
+             iconTheme: {
+               primary: '#28a745',
+               secondary: 'white',
+             },
+           },
+        }}
+      />
+
       <aside className="sidebar">
         <div className="sidebar-header">
           <h3>Panel de Admin</h3>
@@ -45,17 +57,22 @@ function App() {
             onClick={() => cambiarVista('registrar')}
             className={vista === 'registrar' ? 'active' : ''}
           >
-            Registrar Préstamo
+            Registrar Préstamo (Alumno)
+          </button>
+          <button 
+            onClick={() => cambiarVista('practica')}
+            className={vista === 'practica' ? 'active' : ''}
+          >
+            Registrar Práctica (Profesor)
           </button>
         </nav>
       </aside>
 
-      {/* --- 2. CONTENIDO PRINCIPAL --- */}
       <main className="content">
-        {/* El contenido cambia según la vista seleccionada */}
         {vista === 'inventario' && <Inventario apiUrl={API_URL} />}
         {vista === 'prestamos' && <Prestamos apiUrl={API_URL} />}
         {vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
+        {vista === 'practica' && <RegistrarPractica apiUrl={API_URL} />}
       </main>
       
     </div>
