@@ -3,22 +3,20 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2023",
     "lib": ["ES2023"],
-    "module": "ESNext",
+    
+    /* --- CORRECCIÓN AQUÍ --- */
+    "module": "NodeNext", // <-- Debe coincidir con moduleResolution
     "types": ["node"],
     "skipLibCheck": true,
-
-    /* --- CORRECCIONES --- */
-    "composite": true,                     // 1. Requerido por 'tsc -b'
-    "moduleResolution": "NodeNext",        // 2. Cambiado de "bundler"
-    // "allowImportingTsExtensions": true, // 3. ELIMINADO (Causa del error)
-    // "verbatimModuleSyntax": true,       // 4. ELIMINADO
-    // "moduleDetection": "force",         // 5. ELIMINADO
-    // "noEmit": true,                     // 6. ELIMINADO (Conflicto con 'composite')
+    
+    /* Bundler mode */
+    "moduleResolution": "NodeNext", // <-- Correcto
+    "composite": true,
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": false,           // 7. Mantenido (tu petición)
-    "noUnusedParameters": false,       // 8. Mantenido (tu petición)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
