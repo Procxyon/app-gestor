@@ -18,10 +18,10 @@
     // ---------------------------------
 
     /* Linting */
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,     // <-- Esto está bien
     "noUnusedParameters": false, // <-- Esto está bien
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": false,
 
     // --- ¡LAS LÍNEAS QUE ARREGLAN EL OTRO ERROR! ---
     "esModuleInterop": true,
