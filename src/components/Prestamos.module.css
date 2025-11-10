@@ -1,0 +1,351 @@
+/* --- Prestamos.module.css --- */
+
+/* Contenedor "Glass" principal */
+.appContainer {
+  width: 100%;
+  max-width: 1400px; /* Más ancho para esta tabla */
+  margin: 0 auto;
+  
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  
+  padding: 25px 40px;
+  box-sizing: border-box;
+  color: #eee;
+}
+
+/* Cabecera */
+.appContainer header {
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+.appContainer header h2 {
+  margin: 0;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.8em;
+}
+
+/* Contenedor de la Tabla */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto; /* Para pantallas pequeñas */
+}
+
+.tableContainer table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+.tableContainer th:first-child { border-top-left-radius: 8px; }
+.tableContainer th:last-child { border-top-right-radius: 8px; }
+
+.tableContainer th,
+.tableContainer td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9em;
+  white-space: nowrap; /* Evita que el texto se parta */
+}
+
+.tableContainer th {
+  background-color: rgba(255, 255, 255, 0.1);
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+.tableContainer tr:last-child td {
+  border-bottom: none;
+}
+.tableContainer tr:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Columna de Acciones y Estado */
+.actionsCell {
+  display: flex;
+  gap: 8px;
+}
+.statusDevuelto {
+  color: #aaffaa;
+  font-weight: bold;
+}
+.statusPendiente {
+  color: #ffaa77;
+  font-weight: bold;
+}
+
+/* Botones dentro de la tabla */
+.devolverBtn,
+.modifyBtn {
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+}
+.devolverBtn {
+  background-color: #28a745;
+  color: white;
+}
+.devolverBtn:hover {
+  background-color: #218838;
+}
+.modifyBtn {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #eee;
+}
+.modifyBtn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+.modifyBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Acciones Generales (Exportar, Borrar) */
+.generalActions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+}
+.exportBtn,
+.deleteAllBtn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.exportBtn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+}
+.exportBtn:hover {
+  background-color: #e0e0e0;
+}
+.deleteAllBtn {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+.deleteAllBtn:hover {
+  background-color: #c82333;
+}
+
+
+/* --- ESTILOS DEL MODAL DE MODIFICACIÓN --- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modalContent {
+  width: 100%;
+  max-width: 700px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  padding: 25px 30px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.modalContent h2 {
+  margin: 0 0 20px 0;
+  color: #fff;
+  font-weight: 600;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  padding-bottom: 15px;
+}
+
+/* Formulario dentro del Modal */
+.formularioPrestamo fieldset {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.formularioPrestamo legend {
+  font-weight: bold;
+  color: #eee;
+  padding: 0 10px;
+  margin-left: 5px;
+  font-size: 1.1em;
+}
+.formularioPrestamo label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 400; /* Normal, no bold */
+  color: #ccc;
+  font-size: 0.9em;
+}
+.formularioPrestamo input[type="text"],
+.formularioPrestamo input[type="number"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eee;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+.formularioPrestamo input:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
+  border-color: rgba(0, 170, 255, 0.18);
+}
+.formRow {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+.formGroup {
+  flex: 1;
+}
+
+/* Buscador y lista de items del Modal */
+.searchResults {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+}
+.searchResultItem {
+  background-color: rgba(0, 123, 255, 0.3);
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  color: #eee;
+  padding: 8px;
+  margin-top: 5px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+}
+.searchResultItem:hover {
+  background-color: rgba(0, 123, 255, 0.5);
+}
+.solicitudItemsList {
+  list-style-type: none;
+  padding-left: 0;
+}
+.solicitudItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.itemName {
+  font-weight: bold;
+}
+.itemControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.itemControls label {
+  font-size: 0.9em;
+  color: #ccc !important;
+  margin-bottom: 0 !important;
+}
+.itemQuantity {
+  width: 70px !important;
+  text-align: center;
+  padding: 5px 8px;
+}
+.removeBtn {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.removeBtn:hover {
+  background-color: #c82333;
+}
+
+/* Botones del Modal */
+.modalActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  padding-top: 20px;
+}
+.devolverTodaBtn {
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.devolverTodaBtn:hover {
+  background-color: #e0a800;
+}
+.modalCloseBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #eee;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-right: 10px;
+}
+.modalCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.submitBtn {
+  background: linear-gradient(90deg, #007bff, #005fb8);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-size: 0.9em;
+  box-shadow: 0 8px 22px rgba(0, 123, 255, 0.18);
+}
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 123, 255, 0.22);
+}

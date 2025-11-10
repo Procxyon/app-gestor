@@ -1,593 +1,203 @@
-/* --- 1. GLOBALES Y DISEÑO DEL PANEL --- */
-body, html {
+/* --- App.css (NUEVO Y LIMPIO) --- */
+
+/* 1. GLOBALES Y FONDO ANIMADO */
+:root {
+  --accent: #00aaff;
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --muted: #ccc;
+  --top-nav-height: 72px;
+  --top-nav-height-mobile: 120px;
+}
+
+* {
+  box-sizing: border-box;
+}
+html, body {
+  height: 100%;
+}
+body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  background-color: #1a1a1a; /* Fondo general oscuro */
-  color: #eee; /* Texto claro */
+  color: #eee;
+  background: linear-gradient(270deg, #1d2b4a, #1a1a1a, #1d2b4a);
+  background-size: 300% 300%;
+  animation: moveGradient 15s ease infinite;
+  -webkit-font-smoothing: antialiased;
+}
+@keyframes moveGradient {
+  0% { background-position: 0% 50% }
+  50% { background-position: 100% 50% }
+  100% { background-position: 0% 50% }
 }
 
-/* Contenedor principal del panel (Sidebar + Contenido) */
-.admin-panel {
-  display: flex;
+/* Contenedor principal de la App */
+.admin-page-container {
   min-height: 100vh;
-}
-
-/* --- 2. BARRA LATERAL (SIDEBAR) --- */
-.sidebar {
-  width: 240px;
-  background-color: #242424;
-  border-right: 1px solid #444;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0; /* Evita que se encoja */
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
 }
 
-.sidebar-header {
-  padding: 20px;
+/* 2. TOP NAV (GLOBAL) */
+/* Estos estilos son para App.tsx */
+.top-nav {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.nav-title {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  position: relative;
+  padding-left: 64px;
+  gap: 12px;
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 200;
   text-align: center;
-  border-bottom: 1px solid #444;
 }
-
-.sidebar-header h3 {
+.nav-title-text {
+  display: inline-block;
+}
+.nav-links {
   margin: 0;
-  color: #00aaff;
-}
-
-.sidebar-nav {
+  padding: 0;
+  list-style: none;
   display: flex;
-  flex-direction: column;
-  padding: 15px;
   gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
 }
-
-.sidebar-nav button {
-  padding: 12px 15px;
-  background-color: transparent;
+.nav-links li {
+  list-style: none;
+}
+.nav-links button {
+  padding: 8px 14px;
   border: none;
+  background: transparent;
   color: #ccc;
-  font-size: 1em;
-  text-align: left;
-  cursor: pointer;
+  font-size: 0.95em;
+  text-align: center;
   border-radius: 6px;
+  cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
-
-.sidebar-nav button:hover {
-  background-color: #333;
-  color: white;
-}
-
-.sidebar-nav button.active {
-  background-color: #007bff;
-  color: white;
-  font-weight: bold;
-}
-
-/* --- 3. ÁREA DE CONTENIDO PRINCIPAL --- */
-.content {
-  flex: 1; /* Ocupa el resto del espacio */
-  padding: 25px;
-  background-color: #181818;
-  overflow-y: auto; /* Permite scroll vertical */
-}
-
-/* Contenedores de cada "pestaña" para centrar y limitar el ancho */
-.formulario-container,
-.lista-prestamos-container {
-  max-width: 1000px; /* Ancho máximo del contenido */
-  margin: 0 auto; /* Centra el contenido */
-}
-
-.content h2 {
-  border-bottom: 2px solid #444;
-  padding-bottom: 10px;
-  color: #00aaff;
-}
-
-/* --- 4. ESTILOS DE FORMULARIO --- */
-.formulario-prestamo fieldset {
-  border: 1px solid #444;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  padding: 15px;
-}
-.formulario-prestamo legend {
-  font-weight: bold;
-  color: #eee;
-}
-.formulario-prestamo div {
-  margin-bottom: 15px;
-}
-.formulario-prestamo label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #ccc;
-}
-.formulario-prestamo input[type="text"],
-.formulario-prestamo input[type="number"] {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background-color: #333;
-  color: #eee;
-}
-
-/* Fila de 3 campos (Integrantes, Materia, Grupo) */
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-.form-group {
-  flex: 1;
-  min-width: 150px;
-  margin-bottom: 0 !important;
-}
-.form-group input {
-  width: 100%;
-}
-
-/* Checkbox (Maestro) */
-.maestro-check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-.maestro-check input {
-  width: auto;
-  margin: 0;
-}
-.maestro-check label {
-  margin: 0;
-}
-
-/* --- 5. ESTILOS DE BÚSQUEDA Y LISTA --- */
-.search-results {
-  margin-top: 5px;
-  display: flex;
-  flex-direction: column;
-}
-.search-result-item {
-  background-color: #004a7c;
-  border: 1px solid #007bff;
-  color: #eee;
-  padding: 8px;
-  margin-top: 5px;
-  cursor: pointer;
-  text-align: left;
-  border-radius: 4px;
-}
-.search-result-item:hover {
-  background-color: #0056b3;
-}
-
-.lista-solicitud h4 {
-  margin-top: 20px;
-  border-top: 1px solid #444;
-  padding-top: 15px;
-}
-.lista-solicitud p {
-  color: #888;
-}
-.solicitud-items-list {
-  list-style-type: none;
-  padding-left: 0;
-}
-.solicitud-item {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-.solicitud-item .item-name {
-  font-weight: bold;
-  flex-basis: 100%;
-  margin-bottom: 5px;
-}
-.item-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-.item-controls label {
-  font-size: 0.9em;
-  color: #ccc !important;
-  margin-bottom: 0 !important;
-}
-.item-quantity {
-  width: 60px;
-  padding: 5px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background-color: #333;
-  color: #eee;
-}
-.remove-btn {
-  background-color: #dc3545;
-  border: none;
-  color: white;
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: auto; /* Empuja el botón a la derecha */
-}
-.remove-btn:hover {
-  background-color: #c82333;
-}
-
-/* --- 6. ESTILOS DE TABLA (HISTORIAL) --- */
-.table-container {
-  overflow-x: auto; /* Permite scroll horizontal en la tabla */
-}
-.lista-prestamos-container table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  white-space: nowrap; /* Evita que el texto se parta */
-}
-.lista-prestamos-container th,
-.lista-prestamos-container td {
-  border: 1px solid #444;
-  padding: 10px 12px;
-  text-align: left;
-}
-.lista-prestamos-container th {
-  background-color: #333;
-}
-.lista-prestamos-container tr:nth-child(even) {
-  background-color: #2a2a2a;
-}
-.lista-prestamos-container td span {
-  font-weight: bold;
-}
-
-/* --- 7. BOTONES DE ACCIÓN (TABLA Y GENERALES) --- */
-.devolver-btn, .modify-btn {
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 5px;
-  font-size: 0.8em;
-  white-space: nowrap;
-}
-.devolver-btn {
-  background-color: #ffc107;
-  color: #000;
-}
-.modify-btn {
-  background-color: #17a2b8;
-  color: white;
-}
-.modify-btn:disabled {
-  background-color: #555;
-  cursor: not-allowed;
-}
-
-.general-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #444;
-}
-.export-btn, .delete-all-btn {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 1em;
-  font-weight: bold;
-  cursor: pointer;
-}
-.export-btn {
-  background-color: #28a745;
-  color: white;
-}
-.delete-all-btn {
-  background-color: #dc3545;
-  color: white;
-}
-.submit-btn {
-  width: 100%;
-  padding: 15px;
-  font-size: 16px;
-  font-weight: bold;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.submit-btn:disabled {
-  background-color: #555;
-}
-.submit-btn:not(:disabled):hover {
-  background-color: #0056b3;
-}
-
-
-/* --- 8. ESTILOS DE MODAL --- */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: grid;
-  place-items: center;
-  z-index: 1000;
-}
-.modal-content {
-  background-color: #2a2a2a;
-  padding: 20px 30px;
-  border-radius: 8px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-}
-.modal-content h2 {
-  margin-top: 0;
-  border-bottom: 1px solid #444;
-  padding-bottom: 10px;
-}
-.modal-content p {
-  color: #ccc;
-}
-.modal-actions {
-  display: flex;
-  flex-wrap: wrap; /* Para móviles */
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 25px;
-  padding-top: 15px;
-  border-top: 1px solid #444;
-  gap: 10px;
-}
-.modal-close-btn {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.devolver-toda-btn {
-  background-color: #dc3545;
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 0.9em;
-}
-
-/* --- 9. AJUSTES RESPONSIVOS (MÓVIL) --- */
-@media (max-width: 768px) {
-  .admin-panel {
-    flex-direction: column; /* Apila el sidebar y el contenido */
-  }
-  .sidebar {
-    width: 100%; /* El sidebar ocupa todo el ancho */
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid #444;
-  }
-  .sidebar-nav {
-    flex-direction: row; /* Botones uno al lado del otro */
-    overflow-x: auto; /* Scroll horizontal para los botones */
-  }
-  .sidebar-nav button {
-    flex: 1;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .content {
-    padding: 15px;
-  }
-}
-
-.editing-row td {
-  background-color: #444 !important; /* Darker background for active row */
-}
-
-/* Styles for inputs within the table */
-.inventario-container td input[type="text"],
-.inventario-container td input[type="number"] {
-  width: 95%; /* Slightly less width */
-  padding: 6px; /* Smaller padding */
-  box-sizing: border-box;
-  border: 1px solid #007bff; /* Blue border indicates editing */
-  background-color: #555; /* Slightly lighter background */
+.nav-links button:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  font-size: 1em; /* Same size as normal text */
-  border-radius: 3px;
 }
-/* Remove number input arrows (optional) */
-.inventario-container td input[type=number]::-webkit-inner-spin-button,
-.inventario-container td input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.nav-links button.active {
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.09);
 }
-.inventario-container td input[type=number] {
-  -moz-appearance: textfield; /* Firefox */
+.nav-login-button {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
 }
-
-
-/* Container for save/cancel buttons */
-.save-actions {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #444;
-  display: flex;
-  gap: 10px;
+.nav-logout-button {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
 }
 
-.save-btn {
-  background-color: #28a745; /* Green */
+/* Botón hamburguesa */
+.menu-toggle-btn {
+  display: none;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.0);
+  border: 1px solid rgba(255, 255, 255, 0.0);
   color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 1.1em;
   cursor: pointer;
-  font-weight: bold;
-}
-.save-btn:disabled {
-  background-color: #555;
-  cursor: not-allowed;
+  z-index: 120;
 }
 
-.cancel-btn {
-  background-color: #6c757d; /* Gray */
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.cancel-btn:disabled {
-  opacity: 0.7;
-}
-
-.inventario-container {
-  /* Puedes añadir márgenes o padding específicos aquí si quieres */
-}
-
-/* Mejora general de la tabla en modo oscuro */
-.table-container {
-  overflow-x: auto; /* Permite scroll horizontal */
-  margin-top: 15px;
-}
-.inventario-container table { /* Aplica solo a la tabla de inventario */
+/* 3. CONTENIDO PRINCIPAL (GLOBAL) */
+.content-admin-page {
+  flex: 1;
+  padding: 28px;
   width: 100%;
-  border-collapse: collapse;
-  white-space: nowrap; /* Evita que el texto se parta en celdas */
-}
-.inventario-container th,
-.inventario-container td {
-  border: 1px solid #444;
-  padding: 10px 12px; /* Aumenta un poco el padding */
-  text-align: left;
-  vertical-align: middle; /* Alinea verticalmente al centro */
-}
-.inventario-container th {
-  background-color: #333;
-  position: sticky; /* Intenta mantener la cabecera fija */
-  top: 0;
-  z-index: 1; /* Para que esté sobre el contenido al hacer scroll */
-}
-.inventario-container tr:nth-child(even) td { /* Solo aplica a filas pares de inventario */
-  background-color: #2a2a2a;
-}
-.inventario-container tr:hover td { /* Resalta fila al pasar el ratón */
-    background-color: #383838;
-}
-
-/* Estilos específicos para la columna Diferencia */
-.diferencia {
-  font-weight: bold;
-  text-align: center !important; /* Centra el número de diferencia */
-}
-.diferencia.negativa {
-  color: #ff6b6b; /* Rojo claro para diferencias negativas */
-  background-color: rgba(255, 107, 107, 0.1); /* Fondo rojo muy sutil */
-}
-.diferencia.positiva {
-    color: #69db7c; /* Verde claro */
-     background-color: rgba(105, 219, 124, 0.05); /* Fondo verde muy sutil */
-}
-
-/* Ajustes a los inputs de edición inline */
-.inventario-container td input[type="text"],
-.inventario-container td input[type="number"] {
-  padding: 8px; /* Un poco más de padding */
-  font-size: 0.95em; /* Ligeramente más pequeño */
-}
-
-/* Ajuste al botón Cancelar */
-.cancel-btn {
-    background-color: #6c757d;
-    margin-left: 10px; /* Separa del botón Guardar */
-}
-.cancel-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Resaltado de fila en edición */
-.editing-row td {
-  background-color: #3a4a6b !important; /* Azul oscuro para fila activa */
-  /* transition: background-color 0.1s ease-in-out; */ /* Transición suave (opcional) */
-}
-
-/* --- Estilos para Botones de Importar/Exportar --- */
-.import-export-actions {
-  display: flex;
-  align-items: center; /* Centra verticalmente */
-  gap: 15px;
-  margin-bottom: 20px; /* Espacio antes de la tabla */
-  padding-bottom: 20px;
-  border-bottom: 1px solid #444;
-}
-
-/* Estilos comunes para los botones de acción */
-.import-export-actions .export-btn,
-.import-export-actions .import-btn {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  font-size: 0.9em;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.import-export-actions .export-btn {
-  background-color: #1a7b4f; /* Verde más oscuro */
-  color: white;
-}
-.import-export-actions .export-btn:hover {
-  background-color: #218838;
-}
-
-/* El label que parece botón de importar */
-.import-export-actions .import-btn {
-  background-color: #007bff; /* Azul */
-  color: white;
-  display: inline-block; /* Necesario para que el padding funcione bien */
-}
-.import-export-actions .import-btn:hover {
-  background-color: #0056b3;
-}
-.import-export-actions .import-btn.disabled {
-  background-color: #555;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.import-export-actions small {
-    color: #888;
-    margin-left: 5px;
-}
-
-.formulario-prestamo select,
-.formulario-prestamo textarea {
-  width: 100%;
-  padding: 10px;
   box-sizing: border-box;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background-color: #333;
-  color: #eee;
-  font-family: Arial, sans-serif; /* Para que coincida con el resto */
+  padding-top: calc(var(--top-nav-height));
+}
+.top-nav.menu-abierto ~ .content-admin-page {
+  padding-top: calc(var(--top-nav-height-mobile) + 1300px);
+}
+h2 {
+  scroll-margin-top: calc(var(--top-nav-height) + 12px);
+}
+
+
+/* 4. RESPONSIVE (SOLO PARA EL NAV/LAYOUT) */
+@media (max-width: 768px) {
+  .content-admin-page {
+    padding-top: calc(var(--top-nav-height-mobile) + 18px);
+  }
+  .top-nav {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-width: 420px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .nav-title {
+    padding: 8px 44px;
+  }
+  .nav-title-text {
+    display: inline-block;
+    margin: 0;
+  }
+  .menu-toggle-btn {
+    display: block;
+    transform: translateX(-10px) translateY(-50%);
+  }
+  .nav-links {
+    flex-direction: column;
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .28s ease, opacity .2s ease;
+    margin-top: 10px;
+  }
+  .top-nav.menu-abierto .nav-links {
+    max-height: 60vh;
+    opacity: 1;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .nav-links button {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 0;
+  }
 }

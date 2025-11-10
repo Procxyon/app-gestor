@@ -5,130 +5,146 @@ import Prestamos from './components/Prestamos'
 import RegistrarPrestamo from './components/RegistrarPrestamo'
 import RegistrarPractica from './components/RegistrarPractica'
 import HistorialPracticas from './components/HistorialPracticas'
-import Login from './components/Login' // <-- IMPORTAMOS LOGIN
+import Login from './components/Login'
 import './App.css'
 
 const API_URL = 'https://api-inventario.dejesus-ramirez-josue.workers.dev'
 
-// Añadimos 'login' a las vistas posibles
 type Vista = 'inventario' | 'prestamos' | 'historial-practicas' | 'registrar' | 'practica' | 'login'
 
 function App() {
-  // Estado de autenticación
-  const [isAdmin, setIsAdmin] = useState(false);
-  // La vista inicial por defecto ahora es 'practica' (para los profesores)
-  const [vista, setVista] = useState<Vista>('practica');
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [vista, setVista] = useState<Vista>('practica')
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
+  
+  // Estado para manejar la edición
+  const [editingPracticaId, setEditingPracticaId] = useState<number | null>(null);
 
-  // Al cargar la app, revisamos si ya había iniciado sesión antes (persistencia)
   useEffect(() => {
-    const adminLogueado = localStorage.getItem('admin_logged_in') === 'true';
-    setIsAdmin(adminLogueado);
-    // Si ya es admin, le mostramos el inventario por defecto, si no, la práctica
+    const adminLogueado = localStorage.getItem('admin_logged_in') === 'true'
+    setIsAdmin(adminLogueado)
     if (adminLogueado) {
-        setVista('inventario');
+      setVista('inventario') 
+    } else {
+      setVista('practica')
     }
-  }, []);
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768
+      setIsMobile(mobile)
+      if (!mobile) setMenuAbierto(false)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleLoginSuccess = () => {
-      setIsAdmin(true);
-      localStorage.setItem('admin_logged_in', 'true'); // Guardamos en el navegador
-      setVista('inventario'); // Lo mandamos al inventario al entrar
-  };
-
-  const handleLogout = () => {
-      setIsAdmin(false);
-      localStorage.removeItem('admin_logged_in');
-      setVista('practica'); // Lo regresamos a la vista pública
-  };
-
-  const cambiarVista = (nuevaVista: Vista) => {
-    setVista(nuevaVista);
+    setIsAdmin(true)
+    localStorage.setItem('admin_logged_in', 'true')
+    setVista('inventario')
   }
 
+  const handleLogout = () => {
+    setIsAdmin(false)
+    localStorage.removeItem('admin_logged_in')
+    setVista('practica')
+  }
+
+  const cambiarVista = (nuevaVista: Vista) => {
+    setVista(nuevaVista)
+    if (nuevaVista !== 'practica') {
+      setEditingPracticaId(null);
+    }
+    if (window.innerWidth <= 768) { 
+        setMenuAbierto(false)
+    }
+  }
+
+  // Función para iniciar la edición
+  const handleModificarPractica = (id: number) => {
+    setEditingPracticaId(id);
+    setVista('practica');
+  };
+  
+  // Función para terminar la edición
+  const handlePracticaSaved = () => {
+    setEditingPracticaId(null);
+    setVista('historial-practicas');
+  };
+
   return (
-    <div className="admin-panel">
+    <div className="admin-page-container">
       <Toaster position="bottom-right" toastOptions={{ style: { background: '#333', color: '#fff' } }} />
-      
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h3>{isAdmin ? 'Panel Admin' : 'Laboratorio'}</h3>
+
+      <nav className={`top-nav ${menuAbierto ? 'menu-abierto' : ''}`}>
+        <div className="nav-title">
+          {window.innerWidth <= 768 && (
+            <button
+              className="menu-toggle-btn"
+              aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+              onClick={() => setMenuAbierto((s) => !s)}
+            >
+              {menuAbierto ? '✖' : '☰'}
+            </button>
+          )}
+          <span className="nav-title-text">
+            {vista === 'login'
+              ? 'Acceso Administrativo'
+              : isAdmin
+              ? 'Panel de Administración'
+              : 'Gestión de Laboratorio'} 
+          </span>
         </div>
-        
-        <nav className="sidebar-nav">
-          
-          {/* --- MENÚ PARA ADMINISTRADORES (SOLO SE VE SI isAdmin es TRUE) --- */}
+
+        <ul className="nav-links" role="menu">
           {isAdmin && (
             <>
-              <small style={{ color: '#888', marginTop: '15px', marginBottom: '5px' }}>ADMINISTRACIÓN</small>
-              <button onClick={() => cambiarVista('inventario')} className={vista === 'inventario' ? 'active' : ''}>
-              Inventario
-              </button>
-              <button onClick={() => cambiarVista('prestamos')} className={vista === 'prestamos' ? 'active' : ''}>
-              Historial Préstamos
-              </button>
-              <button onClick={() => cambiarVista('historial-practicas')} className={vista === 'historial-practicas' ? 'active' : ''}>
-              Historial Prácticas
-              </button>
-              <button onClick={() => cambiarVista('registrar')} className={vista === 'registrar' ? 'active' : ''}>
-               Préstamo (Alumno)
-              </button>
-              
-              <hr style={{ width: '100%', border: 'none', borderTop: '1px solid #444', margin: '15px 0' }} />
+              <li><button onClick={() => cambiarVista('inventario')} className={vista === 'inventario' ? 'active' : ''}>Inventario</button></li>
+              <li><button onClick={() => cambiarVista('prestamos')} className={vista === 'prestamos' ? 'active' : ''}>Historial Préstamos</button></li>
+              <li><button onClick={() => cambiarVista('historial-practicas')} className={vista === 'historial-practicas' ? 'active' : ''}>Historial Prácticas</button></li>
             </>
           )}
+          <li><button onClick={() => cambiarVista('practica')} className={vista === 'practica' ? 'active' : ''}>
+            {editingPracticaId ? 'Modificar Práctica' : 'Registrar Práctica'}
+          </button></li>
+          <li><button onClick={() => cambiarVista('registrar')} className={vista === 'registrar' ? 'active' : ''}>Registrar Préstamo</button></li>
+          <li>
+            {!isAdmin ? (
+              <button onClick={() => cambiarVista('login')} className={`nav-login-button ${vista === 'login' ? 'active' : ''}`}>LOGIN</button>
+            ) : (
+              <button onClick={handleLogout} className="nav-logout-button">LOGOUT</button>
+            )}
+          </li>
+        </ul>
+      </nav>
 
-          {/* --- MENÚ PÚBLICO (SIEMPRE VISIBLE) --- */}
-          <small style={{ color: '#888', marginBottom: '5px' }}>PROFESORES</small>
-          <button onClick={() => cambiarVista('practica')} className={vista === 'practica' ? 'active' : ''}>
-          Registrar Práctica
-          </button>
-
-          {/* --- BOTÓN DE LOGIN / LOGOUT --- */}
-          <div style={{ marginTop: 'auto', paddingTop: '20px' }}> {/* Empuja hacia abajo */}
-              {!isAdmin ? (
-                  <button 
-                    onClick={() => cambiarVista('login')} 
-                    className={`login-btn ${vista === 'login' ? 'active' : ''}`}
-                    style={{ backgroundColor: '#28a745', color: 'white', marginTop: '20px' }}
-                  >
-                  Iniciar Sesión Admin
-                  </button>
-              ) : (
-                  <button 
-                    onClick={handleLogout} 
-                    style={{ backgroundColor: '#dc3545', color: 'white', marginTop: '20px' }}
-                  >
-                  Cerrar Sesión
-                  </button>
-              )}
-          </div>
-
-        </nav>
-      </aside>
-
-      <main className="content">
-        {/* Renderizado condicional de vistas */}
+      <main className="content-admin-page">
+        {vista === 'practica' && (
+          <RegistrarPractica 
+            apiUrl={API_URL} 
+            practicaId={editingPracticaId}
+            onPracticaSaved={handlePracticaSaved}
+          />
+        )}
         
-        {/* Vistas PÚBLICAS */}
-        {vista === 'practica' && <RegistrarPractica apiUrl={API_URL} />}
+        {vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
         {vista === 'login' && !isAdmin && <Login apiUrl={API_URL} onLoginSuccess={handleLoginSuccess} />}
-
-        {/* Vistas PRIVADAS (Solo si es Admin) */}
+        
         {isAdmin && vista === 'inventario' && <Inventario apiUrl={API_URL} />}
         {isAdmin && vista === 'prestamos' && <Prestamos apiUrl={API_URL} />}
-        {isAdmin && vista === 'historial-practicas' && <HistorialPracticas apiUrl={API_URL} />}
-        {isAdmin && vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
         
-        {/* Si intenta acceder a algo privado sin ser admin, lo redirige al login */}
-        {!isAdmin && vista !== 'practica' && vista !== 'login' && (
-            <div style={{ textAlign: 'center', marginTop: '50px', color: '#888' }}>
-                <h2>Acceso Restringido</h2>
-                <p>Por favor inicia sesión como administrador.</p>
-            </div>
+        {isAdmin && vista === 'historial-practicas' && (
+          <HistorialPracticas 
+            apiUrl={API_URL} 
+            onModificar={handleModificarPractica} 
+          />
         )}
-
+        
+        {!isAdmin && (vista === 'inventario' || vista === 'prestamos' || vista === 'historial-practicas') && (
+          <Login apiUrl={API_URL} onLoginSuccess={handleLoginSuccess} />
+        )}
       </main>
-      
     </div>
   )
 }

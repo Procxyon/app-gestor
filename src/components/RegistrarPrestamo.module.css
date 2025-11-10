@@ -1,0 +1,322 @@
+/* --- RegistrarPrestamo.module.css --- */
+
+/* --- 2. CONTENEDOR PRINCIPAL "DE VIDRIO" --- */
+.appContainer {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  padding: 30px;
+}
+
+/* --- 3. CABECERA --- */
+.appContainer header {
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+.appContainer header h1 {
+  margin: 10px 0 0 0;
+  color: #ffffff;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+/* --- 4. ESTILOS DE FORMULARIO (Minimalista) --- */
+.formularioPrestamo fieldset {
+  border: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
+.formularioPrestamo div {
+  margin-bottom: 15px;
+}
+.formularioPrestamo label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #ccc;
+  font-size: 0.9em;
+}
+
+/* Inputs de "Vidrio" */
+.formularioPrestamo input[type="text"],
+.formularioPrestamo input[type="number"],
+.formularioPrestamo select {
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  color: #eee;
+  font-family: Arial, sans-serif;
+  font-size: 1em;
+  color-scheme: dark; /* Íconos claros */
+}
+.formularioPrestamo input::placeholder {
+  color: #ccc;
+}
+.formularioPrestamo input:focus,
+.formularioPrestamo select:focus {
+  outline: none;
+  border: 1px solid #007bff;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Fila de 3 campos */
+.formRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.formGroup {
+  flex: 1;
+  min-width: 150px;
+  margin-bottom: 0 !important;
+}
+.formGroup input {
+  width: 100%;
+}
+
+/* --- 5. BÚSQUEDA Y LISTA DE ITEMS (Estilo "Vidrio") --- */
+.searchResults {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+}
+.searchResultItem {
+  background-color: rgba(0, 123, 255, 0.3);
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  color: #eee;
+  padding: 8px;
+  margin-top: 5px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+}
+.searchResultItem:hover {
+  background-color: rgba(0, 123, 255, 0.5);
+}
+
+.listaSolicitud h4 {
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 15px;
+}
+.listaSolicitud p {
+  color: #888;
+}
+.solicitudItemsList {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.solicitudItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.itemName {
+  font-weight: bold;
+}
+.itemControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.itemControls label {
+  font-size: 0.9em;
+  color: #ccc !important;
+  margin-bottom: 0 !important;
+}
+.itemQuantity {
+  width: 70px !important;
+  text-align: center;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #eee;
+}
+.itemQuantity::placeholder {
+  color: #ccc;
+}
+
+.removeBtn {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.removeBtn:hover {
+  background-color: #c82333;
+}
+
+/* --- 6. ACORDEÓN (Minimalista) --- */
+.accordionItem {
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 10px;
+  background-color: transparent;
+  border-radius: 0;
+}
+.accordionHeader {
+  padding: 15px 10px;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+.accordionHeader:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.accordionHeader span {
+  font-size: 1.2em;
+}
+.accordionContent {
+  padding: 20px 10px 10px 10px;
+  border-top: none;
+}
+.accordionContent fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.nextBtn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  float: right;
+  margin-top: 10px;
+}
+.nextBtn:hover {
+  background-color: #0056b3;
+}
+
+/* --- 7. SELECCIÓN DE TIPO --- */
+.tipoSolicitudSelector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.tipoSolicitudSelector label {
+  flex: 1;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+.tipoSolicitudSelector input[type="radio"] {
+  display: none;
+}
+.tipoSolicitudSelector label:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+.tipoSolicitudSelector label.active {
+  background-color: #007bff; /* Azul sólido al seleccionar */
+  border-color: #007bff;
+  color: white;
+}
+
+/* --- 8. CAMPOS DESHABILITADOS Y OCULTOS --- */
+.camposEquipo {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+.camposEquipo.visible {
+  max-height: 500px; /* Altura suficiente para mostrar los campos */
+}
+.formularioPrestamo input:disabled,
+.formularioPrestamo select:disabled {
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: #666 !important;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+
+/* --- 9. BOTÓN DE ENVÍO (Verde, como en App.css) --- */
+.submitBtn {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: bold;
+  background-color: #28a745; /* Verde sólido */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 20px;
+}
+.submitBtn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.submitBtn:not(:disabled):hover {
+  background-color: #218838;
+}
+
+/* --- AÑADIR AL FINAL --- */
+
+/* Estilo para el header (alinear H1 y Checkbox) */
+.appContainer header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.appContainer header h1 {
+  margin: 0; /* Quita el margen original */
+}
+
+/* Estilo para el Checkbox de Profesor */
+.profesorCheck {
+  /* Tamaño y apariencia */
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  
+  /* Tooltip (el 'title' se pone en el JSX) */
+}
+
+/* Estilo para deshabilitar una sección del acordeón */
+.accordionItem.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* Evita clics */
+}
+
+/* (Opcional) Si quieres un look más "deshabilitado" */
+/*
+.accordionItem.disabled .accordionHeader {
+  background-color: rgba(0, 0, 0, 0.1); 
+}
+*/

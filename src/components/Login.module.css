@@ -1,0 +1,122 @@
+/* --- Login.module.css --- */
+
+.loginPageWrapper {
+  width: 100%;
+  min-height: calc(100vh - var(--top-nav-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 520px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.loginTitle {
+  margin: 0 0 16px 0;
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.loginForm {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.loginForm .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loginForm label {
+  color: #d6d6d6;
+  font-size: 0.95rem;
+  text-align: left;
+  margin: 0;
+}
+
+.loginForm input[type="text"],
+.loginForm input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eee;
+  font-size: 1rem;
+}
+
+.loginForm input::placeholder {
+  color: #bbb;
+}
+
+.loginForm input:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
+  border-color: rgba(0, 170, 255, 0.18);
+}
+
+.loginSubmit {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(90deg, #007bff, #005fb8);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 123, 255, 0.18);
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+
+.loginSubmit[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loginSubmit:hover:not([disabled]) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 123, 255, 0.22);
+}
+
+.loginForm small {
+  display: block;
+  text-align: center;
+  color: #9aa;
+}
+
+/* Responsive para Login */
+@media (max-width: 768px) {
+  .loginPageWrapper {
+    min-height: calc(100vh - 120px);
+    padding: 18px;
+  }
+  .loginCard {
+    padding: 20px;
+  }
+  .loginForm {
+    max-width: 100%;
+    gap: 10px;
+  }
+  .loginTitle {
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+  }
+}

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import styles from './Login.module.css'; // 1. Importa el Módulo de CSS
 
 interface LoginProps {
   apiUrl: string;
-  onLoginSuccess: () => void; // Función que se ejecutará cuando el login sea correcto
+  onLoginSuccess: () => void;
 }
 
-function Login({ apiUrl, onLoginSuccess }: LoginProps) {
+export default function Login({ apiUrl, onLoginSuccess }: LoginProps) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,56 +19,77 @@ function Login({ apiUrl, onLoginSuccess }: LoginProps) {
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, password })
+        body: JSON.stringify({ usuario, password }),
       });
 
       if (response.ok) {
-        toast.success("¡Bienvenido Administrador!");
-        onLoginSuccess(); // Avisa a App.tsx que ya entramos
+        toast.success('¡Bienvenido Administrador!');
+        onLoginSuccess();
       } else {
-        toast.error("Usuario o contraseña incorrectos");
+        let msg = 'Usuario o contraseña incorrectos';
+        try {
+          const json = await response.json();
+          if (json?.message) msg = json.message;
+        } catch {}
+        toast.error(msg);
       }
-    } catch (error) {
-      toast.error("Error de conexión al intentar login");
+    } catch (err) {
+      toast.error('Error de conexión al intentar login');
+      console.error('Login error', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-container" style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', backgroundColor: '#2a2a2a', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-      <h2 style={{ textAlign: 'center', color: '#00aaff', marginTop: 0 }}>Acceso Administrativo</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', color: '#ccc', marginBottom: '5px' }}>Usuario:</label>
-          <input 
-            type="text" 
-            value={usuario} 
-            onChange={(e) => setUsuario(e.target.value)} 
-            required 
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#333', color: 'white' }}
-          />
-        </div>
-        <div style={{ marginBottom: '25px' }}>
-          <label style={{ display: 'block', color: '#ccc', marginBottom: '5px' }}>Contraseña:</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#333', color: 'white' }}
-          />
-        </div>
-        <button 
-          type="submit" 
-          disabled={loading}
-          style={{ width: '100%', padding: '12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}
-        >
-          {loading ? 'Verificando...' : 'Iniciar Sesión'}
-        </button>
-      </form>
+    // 2. Usa los estilos del módulo
+    <div className={styles.loginPageWrapper}>
+      <div className={styles.loginCard} role="dialog" aria-labelledby="login-title">
+        <h2 id="login-title" className={styles.loginTitle}>
+          Acceso Administrativo
+        </h2>
+
+        <form className={styles.loginForm} onSubmit={handleSubmit}>
+          <div className={styles.field}>
+            <label htmlFor="user">Usuario</label>
+            <input
+              id="user"
+              name="user"
+              type="text"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              placeholder=""
+              required
+              autoComplete="username"
+              disabled={loading}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="pass">Contraseña</label>
+            <input
+              id="pass"
+              name="pass"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""
+              required
+              autoComplete="current-password"
+              disabled={loading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className={styles.loginSubmit}
+            aria-busy={loading}
+            disabled={loading}
+          >
+            {loading ? 'Verificando...' : 'Iniciar Sesión'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
-
-export default Login;

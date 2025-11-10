@@ -1,0 +1,200 @@
+/* --- Inventario.module.css --- */
+
+/* Contenedor "Glass" principal */
+.appContainer {
+  width: 100%;
+  max-width: 1200px; /* Más ancho para la tabla */
+  margin: 0 auto;
+  
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  
+  padding: 25px 40px;
+  box-sizing: border-box;
+  color: #eee;
+}
+
+/* Cabecera */
+.appContainer header {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.appContainer header h2 {
+  margin: 0 0 10px 0;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.8em;
+}
+.appContainer header p {
+  margin: 0 0 25px 0;
+  color: #ccc;
+  font-size: 0.9em;
+}
+
+/* Controles (Guardar, Importar, Exportar) */
+.saveActions {
+  background: rgba(0, 170, 255, 0.1);
+  border: 1px solid rgba(0, 170, 255, 0.2);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.saveBtn {
+  background: linear-gradient(90deg, #007bff, #005fb8);
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.9em;
+  box-shadow: 0 8px 22px rgba(0, 123, 255, 0.18);
+}
+.saveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 123, 255, 0.22);
+}
+.cancelBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #eee;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.importExportActions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.exportBtn,
+.importBtn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.importBtn {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+.exportBtn:hover { background-color: #e0e0e0; }
+.importBtn:hover { background-color: #218838; }
+.importBtn.disabled,
+.exportBtn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Contenedor de la Tabla */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+.tableContainer table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+.tableContainer th:first-child { border-top-left-radius: 8px; }
+.tableContainer th:last-child { border-top-right-radius: 8px; }
+
+.tableContainer th,
+.tableContainer td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.tableContainer th {
+  background-color: rgba(255, 255, 255, 0.1);
+  font-size: 0.9em;
+  text-transform: uppercase;
+}
+.tableContainer tr:last-child td {
+  border-bottom: none;
+}
+.tableContainer tr:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Fila en modo Edición */
+.editingRow {
+  background-color: rgba(0, 170, 255, 0.1) !important;
+}
+.editingRow input[type="text"],
+.editingRow input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 170, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eee;
+  font-size: 1em;
+  box-sizing: border-box;
+}
+.editingRow input:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
+}
+
+/* Columna de Diferencia */
+.diferencia.negativa {
+  color: #ffaaaa;
+  font-weight: bold;
+}
+.diferencia.positiva {
+  color: #aaffaa;
+}
+
+/* Celda de Visibilidad */
+.visibilityCell {
+  text-align: center;
+}
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8em;
+}
+.statusBadge.visible {
+  background: rgba(40, 167, 69, 0.2);
+  color: #aaffaa;
+}
+.statusBadge.oculto {
+  background: rgba(255, 255, 255, 0.1);
+  color: #999;
+}
+
+.toggleVisibilityBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #eee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.toggleVisibilityBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
