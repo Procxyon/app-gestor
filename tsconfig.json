@@ -1,7 +1,9 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    // ... (tus otras opciones como "target", "jsx", "strict") ...
+
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src"] // Asegúrate de que esto también esté
 }
