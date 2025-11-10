@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import * as XLSX from 'xlsx';
 import Fuse from 'fuse.js';
 import toast from 'react-hot-toast';
-import styles from './Prestamos.module.css'; // Asegúrate de que este CSS tiene los estilos del menú ☰
+import styles from './Prestamos.module.css'; // <-- 1. IMPORTA LOS ESTILOS
 
 // --- Interfaces ---
 interface Prestamo {
@@ -83,7 +83,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
   const prestamosAgrupados = useMemo(() => {
     const grupos = new Map<string, PrestamoAgrupado>();
     
-    // Itera sobre TODOS los préstamos
     for (const p of prestamos) { 
       const uuid = p.solicitud_uuid;
       if (!uuid) continue; 
@@ -124,7 +123,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
     });
 
     return Array.from(grupos.values());
-  }, [prestamos]); // <-- Dependencia 'filtro' eliminada
+  }, [prestamos]);
 
   // --- Función para Cargar Préstamos ---
   const fetchPrestamos = async () => {
@@ -181,7 +180,6 @@ function Prestamos({ apiUrl }: PrestamosProps) {
       toast.error("No hay datos para exportar.");
       return;
     }
-    // Lógica de exportación (puedes ajustar las columnas)
     const headers = ["ID", "Folio Solicitud", "Producto", "Cantidad", "Solicitante", "N° Control/Maestro", "Integrantes", "Materia", "Grupo", "Fecha Préstamo", "Fecha Devolución", "Estado"];
     const rows = prestamos.map(p => [p.id, p.solicitud_uuid || 'N/A', p.nombre_equipo, p.cantidad, p.nombre_persona, p.id_persona || 'Maestro', p.integrantes, p.materia || 'N/A', p.grupo || 'N/A', new Date(p.fecha_prestamo).toLocaleString(), p.fecha_devolucion ? new Date(p.fecha_devolucion).toLocaleString() : '---', p.fecha_devolucion ? 'Devuelto' : 'Pendiente']);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -422,7 +420,7 @@ function Prestamos({ apiUrl }: PrestamosProps) {
                 <td>{grupo.materia || 'N/A'}</td>
                 <td>{new Date(grupo.fecha_prestamo).toLocaleString()}</td>
                 
-                {/* --- MENÚ DE ACCIONES ☰ --- */}
+                {/* --- 3. MENÚ DE ACCIONES ☰ --- */}
                 <td className={styles.actionsCell}>
                   <details 
                     className={styles.actionsMenu}
