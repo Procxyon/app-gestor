@@ -1,4 +1,4 @@
-// Contenido para el nuevo archivo: global.d.ts
+// En: src/global.d.ts
 
 declare module '*.module.css' {
   const classes: { [key: string]: string };
