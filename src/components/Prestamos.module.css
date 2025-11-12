@@ -49,7 +49,8 @@
   overflow-x: auto;
 }
 .tableContainer table {
-  width: 100%;
+  min-width: 800px;
+  width: auto;
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -60,7 +61,7 @@
 
 .tableContainer th,
 .tableContainer td {
-  padding: 12px 15px;
+  padding: 10px 10px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.9em;
@@ -328,4 +329,21 @@
   background-color: #555;
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .tableContainer table {
+    min-width: 800px; /* Fuerza el scroll horizontal */
+    width: auto;
+  }
+  .tableContainer th,
+  .tableContainer td {
+    padding: 8px 10px; /* Padding más pequeño en móvil */
+    font-size: 0.8em; /* Fuente más pequeña en móvil */
+  }
+  /* Ajustar el menú de acciones para que se abra mejor en móvil */
+  .menuDropdown {
+    width: 180px; /* Ancho más pequeño para el menú desplegable */
+    right: 0;
+  }
 }

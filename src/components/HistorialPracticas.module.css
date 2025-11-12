@@ -78,6 +78,8 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  min-width: 800px;
+  width: auto;
 }
 
 .tableContainer th,
@@ -85,6 +87,7 @@
   padding: 12px 15px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
 }
 
 .tableContainer th {
@@ -258,4 +261,37 @@
 .buttonGroup {
   display: flex;
   gap: 15px;
+}
+
+/* Controles (Asegurar que los botones no se salgan) */
+@media (max-width: 600px) {
+  .controls {
+    flex-direction: column; /* Apila el filtro y los botones */
+    align-items: flex-start;
+  }
+  .controls input[type="text"] {
+    min-width: 100%; /* El filtro ocupa todo el ancho */
+  }
+  .buttonGroup {
+    width: 100%; /* El grupo de botones ocupa todo el ancho */
+    justify-content: space-between; /* Distribuye los botones */
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tableContainer table {
+    min-width: 750px; /* Fuerza el scroll horizontal */
+    width: auto;
+  }
+  .tableContainer th,
+  .tableContainer td {
+    padding: 8px 10px; /* Padding más pequeño en móvil */
+    font-size: 0.8em; /* Fuente más pequeña en móvil */
+  }
+  /* Ajustar el menú de acciones para que se abra mejor en móvil */
+  .menuDropdown {
+    width: 180px; 
+    right: 0;
+  }
 }
