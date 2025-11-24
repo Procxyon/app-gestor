@@ -5,14 +5,14 @@ import styles from './RegistrarPrestamo.module.css';
 
 // --- Interfaces ---
 interface Producto { id: number; nombre_equipo: string; }
-interface SolicitudItem extends Producto { cantidad: string; }
+interface ItemExistente { id: number; nombre_equipo: string; cantidad: number; fecha_devolucion: string | null; }
 
-// Interface para items que YA existen en la BD
-interface ItemExistente {
-  id: number;
-  nombre_equipo: string;
-  cantidad: number;
-  fecha_devolucion: string | null;
+// Interfaz para items en el "Carrito" (Entrada Libre)
+interface SolicitudItem { 
+  tempId: string;        // ID temporal para manejo en lista
+  nombre_ui: string;     // Lo que escribió el usuario
+  cantidad: string;
+  producto_real?: Producto | null; // El objeto del inventario (si se encontró)
 }
 
 interface RegistrarPrestamoProps { 
@@ -24,12 +24,13 @@ interface RegistrarPrestamoProps {
 type Seccion = 'solicitante' | 'tipo' | 'equipo' | '';
 type TipoSolicitud = 'PERSONAL' | 'EQUIPO';
 
-const fuseOptions = { keys: ['nombre_equipo'], threshold: 0.4, includeScore: true };
+const fuseOptions = { keys: ['nombre_equipo'], threshold: 0.3, includeScore: true };
 
 function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: RegistrarPrestamoProps) {
   // --- Estados Generales ---
   const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  // Fuse para búsquedas internas
   const fuse = useMemo(() => new Fuse(todosLosProductos, fuseOptions), [todosLosProductos]);
 
   // --- Estados del Formulario ---
@@ -43,19 +44,23 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
   
   const [seccionAbierta, setSeccionAbierta] = useState<Seccion>('solicitante');
   const [isProfesorRequest, setIsProfesorRequest] = useState(false);
-  
-  // --- Estados de Listas ---
-  const [listaSolicitud, setListaSolicitud] = useState<SolicitudItem[]>([]);
-  const [existingItems, setExistingItems] = useState<ItemExistente[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<Producto[]>([]);
-  const [enviando, setEnviando] = useState(false);
-  
-  const isEditing = !!solicitudUuid;
-
-  // --- NUEVO ESTADO: BLOQUEO DE EDICIÓN ---
-  // Si es edición, inicia bloqueado (true). Si es nuevo, inicia desbloqueado (false).
   const [editModeLocked, setEditModeLocked] = useState(false);
+
+  // --- Estados de Listas ---
+  const [existingItems, setExistingItems] = useState<ItemExistente[]>([]);
+  const [listaSolicitud, setListaSolicitud] = useState<SolicitudItem[]>([]);
+  
+  // Inputs de Agregar (Texto Libre)
+  const [textoMaterial, setTextoMaterial] = useState('');
+  const [cantidadInput, setCantidadInput] = useState('1');
+  
+  // Estado para el Modal de Ligado
+  const [itemToLinkIndex, setItemToLinkIndex] = useState<number | null>(null);
+  const [linkSearchTerm, setLinkSearchTerm] = useState('');
+  const [linkResults, setLinkResults] = useState<Producto[]>([]);
+
+  const [enviando, setEnviando] = useState(false);
+  const isEditing = !!solicitudUuid;
 
   // 1. Carga de Inventario
   useEffect(() => {
@@ -78,8 +83,8 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
   const cargarDatosEdicion = () => {
     if (!solicitudUuid) return;
     setLoading(true);
-    setEditModeLocked(true); // Al cargar edición, bloqueamos por defecto
-    setSeccionAbierta('equipo'); // Abrimos directamente la sección de añadir items
+    setEditModeLocked(true); 
+    setSeccionAbierta('equipo'); 
 
     fetch(`${apiUrl}/api/prestamos`)
       .then(res => res.json())
@@ -109,7 +114,7 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
 
             const itemsFormateados: ItemExistente[] = itemsSolicitud.map(p => ({
               id: p.id,
-              nombre_equipo: p.nombre_equipo,
+              nombre_equipo: p.nombre_equipo, // Aquí el backend ya debe resolver el nombre con COALESCE
               cantidad: p.cantidad,
               fecha_devolucion: p.fecha_devolucion
             }));
@@ -132,27 +137,62 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
   }, [isEditing, solicitudUuid, apiUrl]);
 
 
-  // --- Funciones de Manejo ---
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearchTerm = e.target.value;
-    setSearchTerm(newSearchTerm);
-    if (newSearchTerm.trim() === '') { setSearchResults([]); return; }
-    const results = fuse.search(newSearchTerm).map(result => result.item);
-    setSearchResults(results.slice(0, 5));
+  // --- Funciones de Manejo (Entrada Libre + Validación) ---
+  
+  // Buscar coincidencia exacta
+  const findExactMatch = (text: string): Producto | null => {
+    if (!text) return null;
+    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const target = normalize(text);
+    return todosLosProductos.find(p => normalize(p.nombre_equipo) === target) || null;
   };
 
-  const handleAddItem = (producto: Producto) => {
-    setListaSolicitud([...listaSolicitud, { ...producto, cantidad: '1' }]);
-    setSearchTerm(''); setSearchResults([]);
+  const handleAddItem = (e?: React.FormEvent) => {
+    if(e) e.preventDefault();
+    if (!textoMaterial.trim()) return;
+
+    const coincidencia = findExactMatch(textoMaterial);
+
+    const newItem: SolicitudItem = {
+      tempId: crypto.randomUUID(),
+      nombre_ui: textoMaterial,
+      cantidad: cantidadInput === '' ? '1' : cantidadInput,
+      producto_real: coincidencia // null si no encontró
+    };
+
+    setListaSolicitud([...listaSolicitud, newItem]);
+    setTextoMaterial('');
+    setCantidadInput('1');
   };
 
-  const handleRemoveItem = (index: number) => {
-    setListaSolicitud(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveItem = (tempId: string) => {
+    setListaSolicitud(prev => prev.filter(i => i.tempId !== tempId));
   };
 
-  const handleUpdateCantidad = (index: number, nuevaCantidad: string) => {
-    if (/^\d*$/.test(nuevaCantidad)) {
-        setListaSolicitud(prev => prev.map((item, i) => i === index ? { ...item, cantidad: nuevaCantidad } : item));
+  // --- Lógica de Ligado (Modal) ---
+  const openLinkModal = (index: number, textoActual: string) => {
+    setItemToLinkIndex(index);
+    setLinkSearchTerm(textoActual);
+    const results = fuse.search(textoActual).map(r => r.item);
+    setLinkResults(results.slice(0, 5));
+  };
+
+  const handleLinkSearch = (val: string) => {
+    setLinkSearchTerm(val);
+    if (!val.trim()) { setLinkResults([]); return; }
+    const results = fuse.search(val).map(r => r.item);
+    setLinkResults(results.slice(0, 5));
+  };
+
+  const confirmLink = (producto: Producto) => {
+    if (itemToLinkIndex !== null) {
+      setListaSolicitud(prev => prev.map((item, i) => 
+        i === itemToLinkIndex 
+          ? { ...item, nombre_ui: producto.nombre_equipo, producto_real: producto }
+          : item
+      ));
+      setItemToLinkIndex(null);
+      toast.success("Material ligado correctamente");
     }
   };
 
@@ -170,11 +210,11 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     }
   };
 
-  // --- ENVÍO ---
+  // --- ENVÍO (LÓGICA PERMISIVA - UPDATED) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones solo si NO está bloqueada la edición de datos
+    // 1. Validaciones de Datos Personales
     if (!editModeLocked) {
         if (isProfesorRequest) {
             if (!nombrePersona) { toast.error('Falta Nombre del Profesor.'); return; }
@@ -183,16 +223,26 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
         }
     }
     
+    // 2. Validación de Lista
     if (!isEditing && listaSolicitud.length === 0) { 
-        toast.error('Añade al menos un equipo.'); return; 
+        toast.error('La lista está vacía. Añade material.'); return; 
+    }
+
+    // AVISO VISUAL: Si hay items no ligados, solo avisamos (no bloqueamos)
+    const unlinkedCount = listaSolicitud.filter(i => !i.producto_real).length;
+    if (unlinkedCount > 0) {
+      toast(`${unlinkedCount} items externos (sin inventario) se guardarán manualmente.`, { 
+        icon: 'ℹ️',
+        duration: 4000 
+      });
     }
     
     setEnviando(true);
-    const loadingToast = toast.loading(isEditing ? "Guardando..." : "Registrando...");
+    const loadingToast = toast.loading(isEditing ? "Guardando cambios..." : "Generando folio...");
     const uuidFinal = isEditing ? solicitudUuid : crypto.randomUUID();
 
     try {
-      // 1. Actualizar cabeceras (Solo si se desbloqueó la edición o es nuevo)
+      // A. Actualizar Cabeceras
       if (!editModeLocked || !isEditing) {
          if(isEditing && uuidFinal) {
              await fetch(`${apiUrl}/api/solicitud/${uuidFinal}`, {
@@ -209,32 +259,42 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
          }
       }
 
-      // 2. Insertar NUEVOS items
+      // B. Insertar Items (TODOS, vinculados y no vinculados)
       if (listaSolicitud.length > 0) {
-          const solicitudes = listaSolicitud.map(producto => {
+          const solicitudes = listaSolicitud.map(item => {
+            // LÓGICA CLAVE: Si tiene producto_real, mandamos ID. Si no, mandamos nombre_extra.
+            const esVinculado = !!item.producto_real?.id;
+            
             return fetch(`${apiUrl}/api/prestamos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                producto_id: producto.id, 
-                nombre_persona: nombrePersona,
-                numero_de_control: isProfesorRequest ? null : numeroControl, 
-                integrantes: 1, cantidad: parseInt(producto.cantidad) || 0,
-                materia: null, grupo: null, nombre_profesor: null, // Se heredan o no aplican en items extra
-                solicitud_uuid: uuidFinal
+                    producto_id: esVinculado ? item.producto_real!.id : null, 
+                    nombre_extra: esVinculado ? null : item.nombre_ui, // <-- Se envía el texto libre si no hay ID
+                    
+                    nombre_persona: nombrePersona,
+                    numero_de_control: isProfesorRequest ? null : numeroControl, 
+                    integrantes: 1, 
+                    cantidad: parseInt(item.cantidad) || 1,
+                    materia: null, grupo: null, nombre_profesor: null,
+                    solicitud_uuid: uuidFinal
                 }),
             });
           });
-          await Promise.all(solicitudes);
+          
+          const responses = await Promise.all(solicitudes);
+          if (responses.some(res => !res.ok)) throw new Error('Error al registrar algunos items');
       }
 
-      toast.success("¡Guardado con éxito!", { id: loadingToast });
+      // C. Éxito
+      toast.success(isEditing ? "Solicitud actualizada" : "¡Préstamo registrado!", { id: loadingToast });
       
       if (isEditing && onPrestamoSaved) {
           setTimeout(onPrestamoSaved, 800); 
       } else {
           setListaSolicitud([]); setNombrePersona(''); setNumeroControl(''); 
-          setSearchTerm(''); setTipo('PERSONAL'); setSeccionAbierta('solicitante');
+          setLinkSearchTerm(''); setTipo('PERSONAL'); setSeccionAbierta('solicitante');
+          setTextoMaterial(''); setCantidadInput('1');
       }
 
     } catch (error) {
@@ -249,23 +309,17 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
   return (
     <div className={styles.appContainer}>
       <header>
-        <h1>{isEditing ? 'Modificar Préstamo' : 'Registrar Nuevo Préstamo'}</h1>
+        <h1>{isEditing ? 'Gestionar Préstamo' : 'Registrar Nuevo Préstamo'}</h1>
         
-        {/* --- SWITCH INTELIGENTE --- */}
-        <div className={styles.toggleContainer}>
-            <span className={styles.toggleLabel}>
-                {isEditing ? (editModeLocked ? 'Habilitar Edición' : 'Edición Habilitada') : '¿Es Profesor?'}
-            </span>
+        <div className={styles.profesorToggleGroup}>
             <label className={styles.switch}>
                 <input 
                     type="checkbox"
-                    // Si es edición, el check controla el BLOQUEO (invertido: checked = unlocked)
-                    // Si es nuevo, controla ES PROFESOR
                     checked={isEditing ? !editModeLocked : isProfesorRequest} 
                     onChange={(e) => {
                         if (isEditing) {
-                            setEditModeLocked(!e.target.checked); // Invertimos lógica: check = unlock
-                            if(e.target.checked) toast('Edición de datos habilitada', {icon:'🔓'});
+                            setEditModeLocked(!e.target.checked); 
+                            if(e.target.checked) toast('Edición habilitada', {icon:'🔓'});
                         } else {
                             setIsProfesorRequest(e.target.checked);
                             if(e.target.checked) { setTipo('PERSONAL'); setNumeroControl(''); }
@@ -274,6 +328,8 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                 />
                 <span className={styles.slider}></span>
             </label>
+            {isEditing ? ( <span className={styles.profesorBadge} style={{color: !editModeLocked ? '#00aaff' : '#666'}}>{!editModeLocked ? 'Edición Habilitada' : 'Lectura'}</span> ) 
+                       : ( isProfesorRequest && <span className={styles.profesorBadge}>Préstamo a Profesor</span> )}
         </div>
       </header>
       
@@ -282,11 +338,13 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
       {!loading && (
         <form onSubmit={handleSubmit} className={styles.formularioPrestamo}>
             
-            {/* --- BLOQUE DE INFO USUARIO (SOLO EDICIÓN) --- */}
+            {/* --- ZONA DE ITEMS EXISTENTES (SOLO EDICIÓN) --- */}
             {isEditing && (
                 <div className={styles.userInfoBlock}>
-                    <h2>{nombrePersona}</h2>
-                    <p>Folio: {solicitudUuid}</p>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <h2>{nombrePersona}</h2>
+                        <span style={{color:'#aaa', fontSize:'0.8em'}}>Folio: {solicitudUuid?.substring(0,8)}...</span>
+                    </div>
                     
                     {existingItems.length > 0 && (
                         <div className={styles.existingItemsSection}>
@@ -363,7 +421,7 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                         
                         <div className={`${styles.camposEquipo} ${tipo === 'EQUIPO' ? styles.visible : ''}`}>
                             <div className={styles.formGroup}>
-                                <label>Profesor:</label>
+                                <label>Profesor a Cargo:</label>
                                 <input type="text" value={nombreProfesor} onChange={(e) => setNombreProfesor(e.target.value)} disabled={editModeLocked && isEditing} />
                             </div>
                             <div className={styles.formRow}>
@@ -389,40 +447,62 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                 )}
             </div>
             
-            {/* --- SECCIÓN 3: AÑADIR ITEMS (Siempre Habilitada) --- */}
+            {/* --- SECCIÓN 3: AÑADIR ITEMS (ENTRADA LIBRE + LIGADO) --- */}
             <div className={styles.accordionItem}>
                 <div className={styles.accordionHeader} onClick={() => setSeccionAbierta('equipo')}>
-                    <span>3. {isEditing ? 'Añadir MÁS Items (Opcional)' : 'Seleccionar Items'}</span>
+                    <span>3. {isEditing ? 'Añadir MÁS Items' : 'Seleccionar Items'}</span>
                     <span>{seccionAbierta === 'equipo' ? '▲' : '▼'}</span>
                 </div>
 
                 {seccionAbierta === 'equipo' && (
                 <div className={styles.accordionContent}>
                     <fieldset>
-                        <div className={styles.formGroup}>
-                            <label>Buscar Item:</label>
-                            <input type="text" value={searchTerm} onChange={handleSearch} placeholder="Escribe para buscar..." />
-                            
-                            <div className={styles.searchResults}>
-                                {searchResults.map((producto) => (
-                                <button type="button" key={producto.id} onClick={() => handleAddItem(producto)} className={styles.searchResultItem}>
-                                    + {producto.nombre_equipo}
-                                </button>
-                                ))}
-                            </div>
+                        <label>Agregar Material:</label>
+                        <div className={styles.addItemRow}>
+                            <input 
+                                type="text" 
+                                className={styles.inputMaterial}
+                                value={textoMaterial}
+                                onChange={(e) => setTextoMaterial(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem(); } }}
+                                placeholder="Ej. Caimanes, Arduino..." 
+                            />
+                            <input 
+                                type="number" 
+                                className={styles.inputCantidad}
+                                value={cantidadInput}
+                                onChange={(e) => setCantidadInput(e.target.value)}
+                                onBlur={() => { if(!cantidadInput) setCantidadInput('1'); }}
+                                placeholder="1"
+                                min="1"
+                            />
+                            <button type="button" onClick={() => handleAddItem()} className={styles.btnAdd}>+</button>
                         </div>
                         
                         <div className={styles.listaSolicitud}>
                             <h4>{isEditing ? 'Nuevos a agregar:' : 'Carrito de Solicitud:'}</h4>
-                            {listaSolicitud.length === 0 && <p style={{fontSize:'0.9em', color:'#888'}}>Ningún item nuevo seleccionado.</p>}
+                            {listaSolicitud.length === 0 && <p style={{fontSize:'0.9em', color:'#888'}}>Lista vacía.</p>}
                             
                             <ul className={styles.solicitudItemsList}>
-                                {listaSolicitud.map((prod, index) => (
-                                <li key={index} className={styles.solicitudItem}>
-                                    <span className={styles.itemName}>{prod.nombre_equipo}</span>
+                                {listaSolicitud.map((item, index) => (
+                                <li key={item.tempId} className={styles.solicitudItem}>
+                                    <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                        <div className={styles.itemStatus}>
+                                            {item.producto_real ? (
+                                                <span className={styles.statusOk} title="OK: Encontrado en inventario">✅</span>
+                                            ) : (
+                                                <div className={styles.statusWarning} title="No coincide con inventario. (Se guardará como texto libre)">
+                                                    {/* Botón opcional si quieren ligar, pero ya no es forzoso */}
+                                                    <button type="button" onClick={() => openLinkModal(index, item.nombre_ui)}>⚠️</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className={styles.itemName}>{item.nombre_ui}</span>
+                                    </div>
+                                    
                                     <div className={styles.itemControls}>
-                                        <input type="text" className={styles.itemQuantity} value={prod.cantidad} onChange={(e) => handleUpdateCantidad(index, e.target.value)} />
-                                        <button type="button" onClick={() => handleRemoveItem(index)} className={styles.removeBtn}>X</button>
+                                        <span style={{marginRight:'10px', color:'#ccc'}}>x {item.cantidad}</span>
+                                        <button type="button" onClick={() => handleRemoveItem(item.tempId)} className={styles.removeBtn}>X</button>
                                     </div>
                                 </li>
                                 ))}
@@ -446,8 +526,36 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
 
         </form>
       )}
+
+      {/* --- MODAL FLOTANTE PARA LIGAR --- */}
+      {itemToLinkIndex !== null && (
+        <div className={styles.linkModalOverlay} onClick={() => setItemToLinkIndex(null)}>
+            <div className={styles.linkModal} onClick={e => e.stopPropagation()}>
+                <h4>Ligar "{listaSolicitud[itemToLinkIndex].nombre_ui}" con:</h4>
+                <input 
+                    type="text" 
+                    className={styles.formularioPrestamo + ' input'}
+                    style={{width:'100%', padding:'10px', background:'#333', color:'#fff', border:'1px solid #555', borderRadius:'5px'}}
+                    value={linkSearchTerm}
+                    onChange={(e) => handleLinkSearch(e.target.value)}
+                    placeholder="Buscar en inventario..."
+                    autoFocus
+                />
+                <div className={styles.linkOptions}>
+                    {linkResults.length === 0 && <p style={{padding:'10px', color:'#888'}}>Sin coincidencias.</p>}
+                    {linkResults.map(prod => (
+                        <div key={prod.id} className={styles.linkOption} onClick={() => confirmLink(prod)}>
+                            {prod.nombre_equipo}
+                        </div>
+                    ))}
+                </div>
+                <button style={{marginTop:'15px', background:'transparent', border:'none', color:'#aaa', cursor:'pointer', width:'100%'}} onClick={() => setItemToLinkIndex(null)}>Cancelar</button>
+            </div>
+        </div>
+      )}
+
     </div>
-  )
+  );
 }
 
 export default RegistrarPrestamo;
