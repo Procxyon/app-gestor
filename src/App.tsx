@@ -16,27 +16,17 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [vista, setVista] = useState<Vista>('practica')
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const [isMobile, setIsMobile] = useState<boolean>(false)
-  
-  // Estado para manejar la edición
   const [editingPracticaId, setEditingPracticaId] = useState<number | null>(null);
+  const [editingPrestamoUuid, setEditingPrestamoUuid] = useState<string | null>(null);
 
   useEffect(() => {
     const adminLogueado = localStorage.getItem('admin_logged_in') === 'true'
     setIsAdmin(adminLogueado)
-    if (adminLogueado) {
-      setVista('inventario') 
-    } else {
+    if (!adminLogueado) {
       setVista('practica')
+    } else {
+       if (vista === 'login') setVista('inventario')
     }
-    const checkMobile = () => {
-      const mobile = window.innerWidth <= 768
-      setIsMobile(mobile)
-      if (!mobile) setMenuAbierto(false)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   const handleLoginSuccess = () => {
@@ -56,96 +46,183 @@ function App() {
     if (nuevaVista !== 'practica') {
       setEditingPracticaId(null);
     }
-    if (window.innerWidth <= 768) { 
-        setMenuAbierto(false)
+    if (nuevaVista !== 'prestamos') {
+      setEditingPrestamoUuid(null);
     }
+    setMenuAbierto(false)
   }
 
-  // Función para iniciar la edición
   const handleModificarPractica = (id: number) => {
     setEditingPracticaId(id);
     setVista('practica');
   };
   
-  // Función para terminar la edición
   const handlePracticaSaved = () => {
     setEditingPracticaId(null);
     setVista('historial-practicas');
   };
 
-  return (
-    <div className="admin-page-container">
-      <Toaster position="bottom-right" toastOptions={{ style: { background: '#333', color: '#fff' } }} />
+  const handleModificarPrestamo = (uuid: string) => {
+    setEditingPrestamoUuid(uuid);
+    setVista('registrar'); // Cambiamos a la vista de registro de préstamo
+  };
 
-      <nav className={`top-nav ${menuAbierto ? 'menu-abierto' : ''}`}>
-        <div className="nav-title">
-          {window.innerWidth <= 768 && (
+  const handlePrestamoSaved = () => {
+    setEditingPrestamoUuid(null);
+    setVista('prestamos'); // Volvemos al historial
+  };
+
+  return (
+    <>
+      <Toaster 
+        position="bottom-right" 
+        reverseOrder={false}
+        toastOptions={{ 
+          style: { 
+            background: '#1e222d', 
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            zIndex: 99999, 
+          },
+          success: {
+            iconTheme: { primary: '#28a745', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#dc3545', secondary: '#fff' },
+          },
+        }} 
+        containerStyle={{
+           bottom: 40, /* Lo levantamos un poco para que no pegue al borde */
+           right: 20,
+        }}
+      />
+
+      {/* 2. CONTENEDOR PRINCIPAL DE LA APP */}
+      <div className="admin-page-container">
+        
+        {/* BARRA DE NAVEGACIÓN SUPERIOR */}
+        <nav className={`top-nav ${menuAbierto ? 'menu-abierto' : ''}`}>
+          <div className="nav-title">
             <button
               className="menu-toggle-btn"
-              aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
               onClick={() => setMenuAbierto((s) => !s)}
             >
               {menuAbierto ? '✖' : '☰'}
             </button>
-          )}
-          <span className="nav-title-text">
-            {vista === 'login'
-              ? 'Acceso Administrativo'
-              : isAdmin
-              ? 'Panel de Administración'
-              : 'Gestión de Laboratorio'} 
-          </span>
-        </div>
+            <span className="nav-title-text">
+              Gestión Laboratorio
+            </span>
+          </div>
 
-        <ul className="nav-links" role="menu">
-          {isAdmin && (
-            <>
-              <li><button onClick={() => cambiarVista('inventario')} className={vista === 'inventario' ? 'active' : ''}>Inventario</button></li>
-              <li><button onClick={() => cambiarVista('prestamos')} className={vista === 'prestamos' ? 'active' : ''}>Historial Préstamos</button></li>
-              <li><button onClick={() => cambiarVista('historial-practicas')} className={vista === 'historial-practicas' ? 'active' : ''}>Historial Prácticas</button></li>
-            </>
-          )}
-          <li><button onClick={() => cambiarVista('practica')} className={vista === 'practica' ? 'active' : ''}>
-            {editingPracticaId ? 'Modificar Práctica' : 'Registrar Práctica'}
-          </button></li>
-          <li><button onClick={() => cambiarVista('registrar')} className={vista === 'registrar' ? 'active' : ''}>Registrar Préstamo</button></li>
-          <li>
-            {!isAdmin ? (
-              <button onClick={() => cambiarVista('login')} className={`nav-login-button ${vista === 'login' ? 'active' : ''}`}>LOGIN</button>
-            ) : (
-              <button onClick={handleLogout} className="nav-logout-button">LOGOUT</button>
+          <ul className="nav-links">
+              
+            {/* GRUPO 1: NUEVOS REGISTROS (Visible para todos) */}
+            <li className="dropdown-container">
+               <span className="dropdown-trigger">Nuevos Registros ▾</span>
+               <div className="dropdown-menu">
+                  <button onClick={() => cambiarVista('practica')} className={vista === 'practica' ? 'active' : ''}>
+                      Práctica
+                  </button>
+                  <button onClick={() => cambiarVista('registrar')} className={vista === 'registrar' ? 'active' : ''}>
+                      Préstamos
+                  </button>
+               </div>
+            </li>
+
+            {/* GRUPO 2: HISTORIAL (Solo Admin) */}
+            {isAdmin && (
+              <li className="dropdown-container">
+                  <span className="dropdown-trigger">Historial ▾</span>
+                  <div className="dropdown-menu">
+                      <button onClick={() => cambiarVista('historial-practicas')} className={vista === 'historial-practicas' ? 'active' : ''}>
+                          H. Prácticas
+                      </button>
+                      <button onClick={() => cambiarVista('prestamos')} className={vista === 'prestamos' ? 'active' : ''}>
+                          H. Préstamos
+                      </button>
+                  </div>
+              </li>
             )}
-          </li>
-        </ul>
-      </nav>
 
-      <main className="content-admin-page">
-        {vista === 'practica' && (
-          <RegistrarPractica 
-            apiUrl={API_URL} 
-            practicaId={editingPracticaId}
-            onPracticaSaved={handlePracticaSaved}
-          />
-        )}
-        
-        {vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
-        {vista === 'login' && !isAdmin && <Login apiUrl={API_URL} onLoginSuccess={handleLoginSuccess} />}
-        
-        {isAdmin && vista === 'inventario' && <Inventario apiUrl={API_URL} />}
-        {isAdmin && vista === 'prestamos' && <Prestamos apiUrl={API_URL} />}
-        
-        {isAdmin && vista === 'historial-practicas' && (
-          <HistorialPracticas 
-            apiUrl={API_URL} 
-            onModificar={handleModificarPractica} 
-          />
-        )}
-        
-        {!isAdmin && (vista === 'inventario' || vista === 'prestamos' || vista === 'historial-practicas') && (
-          <Login apiUrl={API_URL} onLoginSuccess={handleLoginSuccess} />
-        )}
-      </main>
-    </div>
+            {/* GRUPO 3: INVENTARIO (Solo Admin) */}
+            {isAdmin && (
+               <li className="dropdown-container">
+                  <span className="dropdown-trigger">Inventario ▾</span>
+                  <div className="dropdown-menu">
+                      <button onClick={() => cambiarVista('inventario')} className={vista === 'inventario' ? 'active' : ''}>
+                          Inventario General
+                      </button>
+                  </div>
+              </li>
+            )}
+
+            {/* GRUPO 4: PERFIL / LOGIN */}
+            <li className="dropdown-container profile-dropdown">
+              <span className={`dropdown-trigger ${isAdmin ? 'admin-active' : ''}`}>
+                  {isAdmin ? 'ADMIN ▾' : 'INGRESAR ▾'}
+              </span>
+              <div className="dropdown-menu right-aligned">
+                  {!isAdmin ? (
+                      <button onClick={() => cambiarVista('login')} className={vista === 'login' ? 'active' : ''}>
+                          Ingresar
+                      </button>
+                  ) : (
+                      <button onClick={handleLogout} className="logout-btn">
+                          Salir
+                      </button>
+                  )}
+              </div>
+            </li>
+
+          </ul>
+        </nav>
+
+        {/* ÁREA DE CONTENIDO PRINCIPAL */}
+        <main className="content-admin-page">
+          
+          {/* Vista: Registro de Prácticas */}
+          {vista === 'practica' && (
+            <RegistrarPractica 
+              apiUrl={API_URL} 
+              practicaId={editingPracticaId} 
+              onPracticaSaved={handlePracticaSaved} 
+            />
+          )}
+          
+          {/* Vista: Registro de Préstamos (Con modo edición) */}
+          {vista === 'registrar' && (
+              <RegistrarPrestamo 
+                  apiUrl={API_URL} 
+                  solicitudUuid={editingPrestamoUuid} 
+                  onPrestamoSaved={handlePrestamoSaved} 
+              />
+          )}
+
+          {/* Vista: Login */}
+          {vista === 'login' && !isAdmin && <Login apiUrl={API_URL} onLoginSuccess={handleLoginSuccess} />}
+          
+          {/* Vistas de Administrador */}
+          {isAdmin && vista === 'inventario' && <Inventario apiUrl={API_URL} />}
+          
+          {isAdmin && vista === 'prestamos' && (
+              <Prestamos 
+                  apiUrl={API_URL} 
+                  onModificar={handleModificarPrestamo} 
+              />
+          )}
+          
+          {isAdmin && vista === 'historial-practicas' && (
+              <HistorialPracticas 
+                  apiUrl={API_URL} 
+                  onModificar={handleModificarPractica} 
+              />
+          )}
+        </main>
+      </div>
+    </>
   )
 }
 

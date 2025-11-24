@@ -1,69 +1,56 @@
-import { useState } from 'react'
-import Inventario from './components/Inventario'
-import Prestamos from './components/Prestamos'
-import RegistrarPrestamo from './components/RegistrarPrestamo'
-// --- ¡NUEVA IMPORTACIÓN! ---
-import RegistrarPractica from './components/RegistrarPractica'
-import './App.css'
+/* --- index.css --- */
 
-const API_URL = 'https://api-inventario.dejesus-ramirez-josue.workers.dev'
-
-// Ahora tenemos 4 vistas
-type Vista = 'inventario' | 'prestamos' | 'registrar' | 'practica'
-
-function App() {
-  const [vista, setVista] = useState<Vista>('inventario')
-
-  const cambiarVista = (nuevaVista: Vista) => {
-    setVista(nuevaVista);
-  }
-
-  return (
-    <div className="admin-panel">
-      
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h3>Panel de Admin</h3>
-        </div>
-        <nav className="sidebar-nav">
-          <button 
-            onClick={() => cambiarVista('inventario')}
-            className={vista === 'inventario' ? 'active' : ''}
-          >
-            Inventario
-          </button>
-          <button 
-            onClick={() => cambiarVista('prestamos')}
-            className={vista === 'prestamos' ? 'active' : ''}
-          >
-            Historial Préstamos
-          </button>
-          <button 
-            onClick={() => cambiarVista('registrar')}
-            className={vista === 'registrar' ? 'active' : ''}
-          >
-            Registrar Préstamo (Alumno)
-          </button>
-          {/* --- ¡NUEVO BOTÓN! --- */}
-          <button 
-            onClick={() => cambiarVista('practica')}
-            className={vista === 'practica' ? 'active' : ''}
-          >
-            Registrar Práctica (Profesor)
-          </button>
-        </nav>
-      </aside>
-
-      <main className="content">
-        {vista === 'inventario' && <Inventario apiUrl={API_URL} />}
-        {vista === 'prestamos' && <Prestamos apiUrl={API_URL} />}
-        {vista === 'registrar' && <RegistrarPrestamo apiUrl={API_URL} />}
-        {/* --- ¡NUEVO COMPONENTE! --- */}
-        {vista === 'practica' && <RegistrarPractica apiUrl={API_URL} />}
-      </main>
-      
-    </div>
-  )
+/* Configuración básica de la fuente y el modo oscuro */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  /* Indica al navegador que use controles oscuros (scrollbars, inputs) */
+  color-scheme: dark; 
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-export default App
+html {
+  /* CRÍTICO: Esto elimina el rebote elástico blanco en Laptops/Macs */
+  overscroll-behavior: none; 
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  
+  /* Fondo de seguridad oscuro (evita pantallazos blancos al cargar) */
+  background-color: #1a1a1a;
+  
+  /* Evita scroll horizontal indeseado */
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* --- Estilo para la barra de desplazamiento (Scrollbar) --- */
+/* Esto hace que la barra sea delgada y oscura, acorde a tu diseño */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

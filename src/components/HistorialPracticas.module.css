@@ -1,9 +1,9 @@
-/* --- HistorialPracticas.module.css --- */
+/* --- HistorialPracticas.module.css (COMPLETO) --- */
 
 /* Contenedor "Glass" principal */
 .appContainer {
   width: 100%;
-  max-width: 1200px; /* Más ancho para la tabla */
+  max-width: 1400px; /* Aumentado un poco para dar aire en pantallas grandes */
   margin: 0 auto;
   
   background: var(--glass-bg, rgba(255, 255, 255, 0.06));
@@ -26,33 +26,49 @@
 .appContainer header h2 {
   margin: 0 0 25px 0;
   color: #fff;
-  font-weight: 600;
+  font-weight: 300;
   font-size: 1.8em;
 }
 
-/* Controles (Filtro y Exportar) */
+/* --- CONTROLES (Barra superior) --- */
 .controls {
   display: flex;
   gap: 15px;
   align-items: center;
   margin-bottom: 20px;
-  justify-content: space-between; /* <-- CAMBIO AQUÍ */
+  justify-content: space-between; /* Extiende elementos a los extremos */
+  width: 100%;
 }
+
+/* Input del Filtro */
 .controls input[type="text"] {
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  background: #f0f0f0; /* <-- CAMBIO AQUÍ (Fondo claro) */
-  color: #333;       /* <-- CAMBIO AQUÍ (Texto oscuro) */
+  background: #f0f0f0; 
+  color: #333;       
   font-size: 1rem;
-  min-width: 300px;
+  min-width: 350px; /* Ancho base */
+  flex-grow: 1;     /* Permite crecer si hay espacio */
+  max-width: 500px; /* Pero no demasiado */
 }
-.controls input:focus {
+.controls input[type="text"]::placeholder {
+  color: #666;
+  opacity: 1;
+}
+.controls input[type="text"]:focus {
   outline: none;
-  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
-  border-color: rgba(0, 170, 255, 0.18);
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
 }
-.controls .exportBtn {
+
+/* Grupo de Botones */
+.buttonGroup {
+  display: flex;
+  gap: 15px;
+}
+
+.exportBtn {
   background-color: #f0f0f0;
   color: #333;
   border: 1px solid #ccc;
@@ -61,69 +77,110 @@
   font-weight: bold;
   font-size: 0.9em;
   cursor: pointer;
+  white-space: nowrap;
 }
-.controls .exportBtn:hover {
-  background-color: #e0e0e0;
-}
+.exportBtn:hover { background-color: #e0e0e0; }
 
-/* Contenedor de la Tabla */
+.deleteAllBtn {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.deleteAllBtn:hover { background-color: #c82333; }
+
+
+/* --- TABLA (SOLUCIÓN DE ALINEACIÓN Y ANCHO) --- */
 .tableContainer {
   width: 100%;
-  overflow-x: auto; /* Para pantallas pequeñas */
+  overflow-x: auto;
+  
+  /* Altura mínima y padding para que el menú tenga espacio */
+  min-height: 450px; 
+  padding-bottom: 150px; 
 }
 
 .tableContainer table {
-  width: 100%;
+  /* ESTO ES CRÍTICO: Fuerza a la tabla a ocupar todo el ancho disponible */
+  width: 100%; 
+  
+  /* Mínimo para asegurar scroll en móviles y no aplastar contenido */
+  min-width: 1000px; 
+  
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  min-width: 800px;
-  width: auto;
 }
 
+/* Estilos de Celdas (Centrado) */
 .tableContainer th,
 .tableContainer td {
-  padding: 12px 15px;
-  text-align: left;
+  padding: 14px 15px;
+  
+  /* CENTRADO PERFECTO */
+  text-align: center;
+  vertical-align: middle;
+  
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+  font-size: 0.95em;
 }
 
 .tableContainer th {
   background-color: rgba(255, 255, 255, 0.1);
   font-size: 0.9em;
   text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.tableContainer tr:last-child td {
-  border-bottom: none;
-}
+/* Bordes redondeados en cabecera */
+.tableContainer th:first-child { border-top-left-radius: 8px; }
+.tableContainer th:last-child { border-top-right-radius: 8px; }
+
+.tableContainer tr:last-child td { border-bottom: none; }
 
 .tableContainer tr:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+/* Listas desplegables (Details) */
 .tableContainer details summary {
   cursor: pointer;
-  list-style: none; /* Quita la flecha */
+  list-style: none;
+  display: inline-block; /* Ayuda al centrado */
 }
-.tableContainer details summary::-webkit-details-marker {
-  display: none; /* Quita la flecha en Chrome/Safari */
-}
+.tableContainer details summary::-webkit-details-marker { display: none; }
 .tableContainer details summary::before {
-  content: '► '; /* Flecha personalizada */
+  content: '► ';
   font-size: 0.8em;
   margin-right: 5px;
+  color: var(--accent, #00aaff);
 }
 .tableContainer details[open] summary::before {
-  content: '▼ '; /* Flecha abierta */
+  content: '▼ ';
+}
+/* Al abrir la lista, el texto interno se alinea a la izquierda para leer mejor */
+.tableContainer ul {
+  text-align: left;
+  margin: 5px 0 0 0;
+  padding-left: 20px;
+  font-size: 0.9em;
+  color: #ccc;
 }
 
-/* --- Menú de Acciones (Hamburguesa) --- */
+
+/* --- MENÚ DE ACCIONES (Hamburguesa) --- */
 .actionsCell {
   position: relative;
-  text-align: center;
+  /* El text-align center ya viene heredado de td, pero aseguramos */
+  text-align: center; 
 }
 
 .menuToggle {
@@ -135,36 +192,53 @@
   cursor: pointer;
   font-weight: bold;
 }
-.menuToggle:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+.menuToggle:hover { background: rgba(255, 255, 255, 0.2); }
 
-/* El <details> funciona como el contenedor del menú */
 .actionsMenu {
   position: relative;
   display: inline-block;
 }
-.actionsMenu summary {
-  list-style: none; /* Quita el marcador */
-}
-.actionsMenu summary::-webkit-details-marker {
-  display: none; /* Quita el marcador en Chrome/Safari */
-}
+.actionsMenu summary { list-style: none; }
+.actionsMenu summary::-webkit-details-marker { display: none; }
 
+/* Menú Desplegable (Base) */
 .menuDropdown {
   position: absolute;
-  right: 0;
-  top: 100%;
+  right: 0; /* Se alinea a la derecha del botón */
+  top: 100%; /* Se abre hacia abajo */
   margin-top: 5px;
   background: #1e222d;
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
   padding: 5px;
-  z-index: 10;
-  width: 150px; /* Ancho fijo para el menú */
+  z-index: 50;
+  width: 170px;
+  text-align: left; /* El texto dentro del menú SÍ va a la izquierda */
 }
 
+/* LÓGICA DE APERTURA INTELIGENTE */
+
+/* 1. Si es de las últimas 3 filas -> ABRE HACIA ARRIBA */
+.tableContainer tr:nth-last-child(-n+3) .menuDropdown {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 5px;
+  box-shadow: 0 -8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* 2. REGLA DE PRIORIDAD: Si es la fila 1 o 2 -> FUERZA HACIA ABAJO
+   (Esto arregla el bug cuando hay solo 1 registro) */
+.tableContainer tr:nth-child(-n+2) .menuDropdown {
+  top: 100% !important;
+  bottom: auto !important;
+  margin-top: 5px !important;
+  margin-bottom: 0 !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Botones del menú */
 .menuButton {
   display: block;
   width: 100%;
@@ -176,122 +250,40 @@
   cursor: pointer;
   border-radius: 6px;
   font-size: 0.9em;
-  box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
 }
 .menuButton:hover {
   background-color: #007bff;
   color: white;
 }
-/* Estilo específico para el botón de borrar */
-.menuButton.delete {
-  color: #ffaaaa;
+.menuButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
+.menuButton.delete { color: #ffaaaa; }
 .menuButton.delete:hover {
   background-color: #dc3545;
   color: white;
 }
 
-/* --- AÑADIR AL FINAL --- */
-
-/* Esto corrige las esquinas de la cabecera para 
-  que coincidan con el borde redondeado de la tabla.
-*/
-.tableContainer th:first-child {
-  border-top-left-radius: 8px;
-}
-
-.tableContainer th:last-child {
-  border-top-right-radius: 8px;
-}
-
-/* --- AÑADIR AL FINAL --- */
-
-/* Agrupa los botones */
-.buttonGroup {
-  display: flex;
-  gap: 15px;
-}
-
-/* Estilo para el botón rojo (copiado de Prestamos) */
-.deleteAllBtn {
-  background-color: #dc3545;
-  color: white;
-  border: 1px solid #dc3545;
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.9em;
-  cursor: pointer;
-}
-.deleteAllBtn:hover {
-  background-color: #c82333;
-}
-
-/* --- AÑADIR AL FINAL DE Prestamos.module.css --- */
-
-/* Controles (Filtro y Botones) */
-.controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 20px;
-  justify-content: space-between; /* Alinea filtro a la izq, botones a la der */
-}
-
-/* Estilo de Filtro (claro) */
-.controls input[type="text"] {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #f0f0f0; /* Fondo claro */
-  color: #333;       /* Texto oscuro */
-  font-size: 1rem;
-  min-width: 350px;
-}
-.controls input[type="text"]::placeholder {
-  color: #666; /* Placeholder más oscuro */
-  opacity: 1;
-}
-.controls input[type="text"]:focus {
-  border-color: #007bff;
-  box-shadow: none;
-}
-
-/* Contenedor de botones */
-.buttonGroup {
-  display: flex;
-  gap: 15px;
-}
-
-/* Controles (Asegurar que los botones no se salgan) */
-@media (max-width: 600px) {
+/* Responsive */
+@media (max-width: 768px) {
   .controls {
-    flex-direction: column; /* Apila el filtro y los botones */
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
   }
   .controls input[type="text"] {
-    min-width: 100%; /* El filtro ocupa todo el ancho */
+    min-width: 100%;
+    max-width: 100%;
   }
   .buttonGroup {
-    width: 100%; /* El grupo de botones ocupa todo el ancho */
-    justify-content: space-between; /* Distribuye los botones */
-    margin-top: 10px;
+    justify-content: space-between;
   }
-}
-
-@media (max-width: 768px) {
   .tableContainer table {
-    min-width: 750px; /* Fuerza el scroll horizontal */
-    width: auto;
+    min-width: 800px;
   }
   .tableContainer th,
   .tableContainer td {
-    padding: 8px 10px; /* Padding más pequeño en móvil */
-    font-size: 0.8em; /* Fuente más pequeña en móvil */
-  }
-  /* Ajustar el menú de acciones para que se abra mejor en móvil */
-  .menuDropdown {
-    width: 180px; 
-    right: 0;
+    padding: 10px 8px;
+    font-size: 0.85em;
   }
 }

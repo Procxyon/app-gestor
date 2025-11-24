@@ -34,11 +34,19 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
   const [filtroProfesor, setFiltroProfesor] = useState('');
   const menuRefs = useRef<Map<number, HTMLDetailsElement>>(new Map());
 
-  // --- Cargar Datos (sin cambios) ---
+// --- Cargar Datos (CORREGIDO PARA EVITAR CACHÉ) ---
   const fetchPracticas = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/practicas`);
+      // AGREGAMOS ESTAS OPCIONES PARA EVITAR QUE EL NAVEGADOR MUESTRE DATOS VIEJOS
+      const res = await fetch(`${apiUrl}/api/practicas`, {
+        cache: 'no-store', // Le dice al navegador: "No guardes esto, pídelo de nuevo siempre"
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
       if (!res.ok) throw new Error('Error al cargar datos');
       const data = await res.json();
       setPracticas(data);
@@ -54,7 +62,7 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     fetchPracticas();
   }, [apiUrl]);
 
-  // --- "Entregar Material" (sin cambios) ---
+  // --- Entregar Material ---
   const handleEntregarMateriales = async (uuid: string | null) => {
     if (!uuid) {
       toast.error("Esta práctica no tiene un préstamo de material asociado.");
@@ -75,12 +83,12 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     }
   };
 
-  // --- "Modificar" (sin cambios) ---
+  // --- Modificar ---
   const handleModificar = (id: number) => {
     onModificar(id);
   };
 
-  // --- "Borrar" (sin cambios) ---
+  // --- Borrar Uno ---
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Estás seguro de borrar este registro de práctica?')) return;
     try {
@@ -93,27 +101,37 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     }
   };
   
-  // --- NUEVA FUNCIÓN: Borrar Todo ---
-  const handleDeleteAllPracticas = async () => {
+  // --- CORRECCIÓN EN HistorialPracticas.tsx ---
+
+ const handleDeleteAllPracticas = async () => {
     if (!window.confirm("¿ESTÁS SEGURO DE QUE QUIERES BORRAR TODO EL HISTORIAL DE PRÁCTICAS?")) return;
     if (!window.confirm("¡¡ADVERTENCIA FINAL!! Esta acción es irreversible. ¿Deseas continuar?")) return;
+    
+    const toastId = toast.loading('Borrando historial...');
+
     try {
-      // Este endpoint (DELETE /api/practicas/all) AÚN NO EXISTE en tu API.
-      // Debes añadirlo a tu index.ts
-      const res = await fetch(`${apiUrl}/api/practicas/all`, { method: 'DELETE' });
+      // --- CAMBIO AQUÍ: USAR LA NUEVA RUTA ---
+      const res = await fetch(`${apiUrl}/api/reset/practicas`, { 
+        method: 'DELETE',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+
       if (!res.ok) {
          const errData = await res.json();
          throw new Error(errData.err || 'Error al borrar historial');
       }
-      toast.success('Historial de prácticas borrado');
-      fetchPracticas(); // Recargar lista
+
+      setPracticas([]); 
+      toast.success('Historial de prácticas borrado', { id: toastId });
+      fetchPracticas(); 
+
     } catch (error) {
       console.error(error);
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Función no implementada en la API'}`);
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`, { id: toastId });
     }
   };
 
-  // --- Manejo de Menús (sin cambios) ---
+  // --- Manejo de Menús ---
   const setMenuRef = (id: number, el: HTMLDetailsElement | null) => {
     if (el) { menuRefs.current.set(id, el); } 
     else { menuRefs.current.delete(id); }
@@ -126,12 +144,57 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     });
   };
   
-  // --- Exportar a Excel (sin cambios) ---
+// --- Exportar a Excel (COMPLETO CON TODOS LOS DATOS) ---
   const handleExport = () => {
-    // ... (Tu código de exportación) ...
+    if (practicas.length === 0) { toast.error("No hay datos para exportar."); return; }
+    
+    const dataToExport = practicas.map(p => ({
+        "ID Registro": p.id,
+        "Folio Solicitud (UUID)": p.solicitud_uuid || 'Sin Material', // Dato técnico vital para cruzar con préstamos
+        "No. Práctica": p.no_practica,
+        "Profesor": p.nombre_profesor,
+        "Práctica": p.nombre_practica,
+        "Fecha": new Date(p.fecha_practica).toLocaleDateString(),
+        "Hora Inicio": p.hora_inicio,
+        "Hora Fin": p.hora_fin || 'N/A',
+        "Carrera": p.carrera,
+        "Asignatura": p.asignatura,
+        "Grupo": p.grupo,
+        "No. Alumnos": p.no_alumnos,
+        "Equipos (Salones/Mesas)": p.equipos.join(', '),
+        "Materiales (Inventario)": p.materiales.join(', '),
+        "Objetivo": p.objetivo,
+        "Observaciones": p.observaciones
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Ajustamos anchos de columna para que se lea bien
+    ws['!cols'] = [
+      { wch: 10 }, // ID
+      { wch: 30 }, // UUID
+      { wch: 12 }, // No Practica
+      { wch: 30 }, // Profesor
+      { wch: 30 }, // Nombre Practica
+      { wch: 12 }, // Fecha
+      { wch: 10 }, // Hora I
+      { wch: 10 }, // Hora F
+      { wch: 25 }, // Carrera
+      { wch: 25 }, // Asignatura
+      { wch: 10 }, // Grupo
+      { wch: 12 }, // Alumnos
+      { wch: 40 }, // Equipos
+      { wch: 40 }, // Materiales
+      { wch: 50 }, // Objetivo
+      { wch: 50 }  // Observaciones
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Historial Completo");
+    XLSX.writeFile(wb, `Historial_Practicas_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
   };
   
-  // --- Filtrado (sin cambios) ---
+  // --- Filtrado ---
   const practicasFiltradas = practicas.filter(p => 
     p.nombre_profesor.toLowerCase().includes(filtroProfesor.toLowerCase())
   );
@@ -144,7 +207,6 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
         <h2>Historial de Prácticas de Laboratorio</h2>
       </header>
       
-      {/* --- JSX DE CONTROLES ACTUALIZADO --- */}
       <div className={styles.controls}>
         <input 
           type="text" 
@@ -162,10 +224,9 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
 
       <div className={styles.tableContainer}>
         <table>
-          {/* ... (Tu tabla <thead> y <tbody> sin cambios) ... */}
           <thead>
             <tr>
-              <th>ID</th>
+              {/* COLUMNA ID ELIMINADA VISUALMENTE */}
               <th>Profesor</th>
               <th>Práctica</th>
               <th>Fecha / Hora</th>
@@ -178,7 +239,7 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
           <tbody>
             {practicasFiltradas.map((p) => (
               <tr key={p.id}>
-                <td>{p.id}</td>
+                {/* CELDA ID ELIMINADA VISUALMENTE */}
                 <td>
                   <strong>{p.nombre_profesor}</strong><br/>
                   <small>(No. {p.no_practica})</small>

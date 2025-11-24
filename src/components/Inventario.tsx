@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx'; 
 import toast from 'react-hot-toast';
-import styles from './Inventario.module.css'; // <-- Importa el módulo
+import styles from './Inventario.module.css'; 
 
 // --- Interfaces ---
 interface Producto {
@@ -27,6 +27,9 @@ function Inventario({ apiUrl }: InventarioProps) {
   const refsInputs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importando, setImportando] = useState(false);
+  
+  // --- NUEVO ESTADO PARA EL FILTRO ---
+  const [filtro, setFiltro] = useState('');
 
   // --- Carga Inicial ---
   const fetchInventario = async () => {
@@ -50,7 +53,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     fetchInventario();
   }, [apiUrl]);
 
-  // --- Funciones de Edición (sin cambios) ---
+  // --- Funciones de Edición ---
   const handleDobleClick = (id: number) => {
     setIdEditando(id);
     setTimeout(() => { refsInputs.current[`nombre-${id}`]?.focus(); refsInputs.current[`nombre-${id}`]?.select(); }, 50);
@@ -80,7 +83,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     }
   };
 
-  // --- Guardar Cambios (sin cambios) ---
+  // --- Guardar Cambios ---
   const handleGuardarCambios = async () => {
     setIdEditando(null); 
     setGuardando(true);
@@ -124,7 +127,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     }
   };
 
-   // --- Cancelar Cambios (sin cambios) ---
+   // --- Cancelar Cambios ---
    const handleCancelarCambios = () => {
         if (hayCambios && window.confirm("¿Descartar cambios no guardados?")) {
             setProductosEditados(productosOriginales); 
@@ -136,7 +139,7 @@ function Inventario({ apiUrl }: InventarioProps) {
         }
    };
 
-  // --- Exportar a Excel (sin cambios) ---
+  // --- Exportar a Excel ---
   const handleExportXLS = () => {
     if (productosOriginales.length === 0) { toast.error("No hay datos para exportar."); return; }
     const dataToExport = productosOriginales.map(p => ({ ID: p.id, NombreEquipo: p.nombre_equipo, Descripcion: p.descripcion, UnidadesTotales: p.unidades_totales, UnidadesPrestadas: p.unidades_prestadas, VecesPrestado: p.loan_count, Visible: p.visible === 1 ? 'Sí' : 'No' })); 
@@ -148,7 +151,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     toast.success("Inventario exportado");
   }
 
-  // --- Manejar Cambio de Archivo e Importar (sin cambios) ---
+  // --- Manejar Cambio de Archivo e Importar ---
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) { handleImportCSV(file); }
@@ -185,7 +188,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     reader.readAsText(file);
   }
   
-  // --- Cambiar Visibilidad (sin cambios) ---
+  // --- Cambiar Visibilidad ---
   const handleToggleVisibilidad = async (id: number) => {
       const originalVisibilityMap = new Map(productosEditados.map(p => [p.id, p.visible]));
       setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: p.visible === 1 ? 0 : 1} : p));
@@ -205,6 +208,12 @@ function Inventario({ apiUrl }: InventarioProps) {
   // --- Renderizado ---
   if (cargando) return <p>Cargando inventario...</p>;
 
+  // --- LÓGICA DE FILTRADO ---
+  const productosFiltrados = productosEditados.filter(p => 
+    p.nombre_equipo.toLowerCase().includes(filtro.toLowerCase()) ||
+    p.id.toString().includes(filtro)
+  );
+
   return (
     <div className={styles.appContainer}>
       <header>
@@ -220,15 +229,25 @@ function Inventario({ apiUrl }: InventarioProps) {
         </div>
       )}
 
-      {/* Botones Exportar/Importar */}
-      <div className={styles.importExportActions}>
-        <button onClick={handleExportXLS} disabled={guardando || importando || hayCambios} className={styles.exportBtn} title={hayCambios ? "Guarda o cancela cambios antes de exportar" : ""}> Exportar a Excel (.xlsx) </button>
-        <label htmlFor="csv-input" className={`${styles.importBtn} ${importando || hayCambios ? styles.disabled : ''}`} title={hayCambios ? "Guarda o cancela cambios antes de importar" : ""}> {importando ? 'Importando...' : 'Importar desde CSV'} </label>
-        <input ref={fileInputRef} id="csv-input" type="file" accept=".csv" onChange={handleFileChange} style={{ display: 'none' }} disabled={importando || hayCambios} />
-        <small>(Reemplaza todo el inventario)</small>
+      {/* --- ZONA DE CONTROLES ACTUALIZADA (BUSCADOR + BOTONES) --- */}
+      <div className={styles.controls}>
+        {/* Buscador */}
+        <input 
+          type="text" 
+          placeholder="Buscar equipo por nombre o ID..." 
+          value={filtro} 
+          onChange={(e) => setFiltro(e.target.value)} 
+        />
+        
+        {/* Botones Importar/Exportar */}
+        <div className={styles.importExportActions} style={{ marginBottom: 0 }}>
+          <button onClick={handleExportXLS} disabled={guardando || importando || hayCambios} className={styles.exportBtn} title={hayCambios ? "Guarda o cancela cambios antes de exportar" : ""}> Exportar a Excel (.xlsx) </button>
+          <label htmlFor="csv-input" className={`${styles.importBtn} ${importando || hayCambios ? styles.disabled : ''}`} title={hayCambios ? "Guarda o cancela cambios antes de importar" : ""}> {importando ? 'Importando...' : 'Importar desde CSV'} </label>
+          <input ref={fileInputRef} id="csv-input" type="file" accept=".csv" onChange={handleFileChange} style={{ display: 'none' }} disabled={importando || hayCambios} />
+        </div>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla (Usa productosFiltrados) */}
       <div className={styles.tableContainer}>
         <table>
           <thead>
@@ -244,7 +263,7 @@ function Inventario({ apiUrl }: InventarioProps) {
             </tr>
           </thead>
           <tbody>
-            {productosEditados.map((producto) => {
+            {productosFiltrados.map((producto) => {
               const diferencia = producto.unidades_totales - producto.unidades_prestadas;
               const isEditing = idEditando === producto.id;
               return (

@@ -1,4 +1,4 @@
-/* --- App.css (NUEVO Y LIMPIO) --- */
+/* --- App.css --- */
 
 /* 1. GLOBALES Y FONDO ANIMADO */
 :root {
@@ -13,41 +13,60 @@
 * {
   box-sizing: border-box;
 }
-html, body {
-  height: 100%;
-  min-height: 100vh; 
-  width: 100%;
-}
-body {
-  margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
-  color: #eee;
+
+/* TRUCO DE RENDIMIENTO:
+   Movemos tu animación al '::before' fijo.
+   Visualmente es idéntico, pero el navegador NO lo repinta al hacer scroll.
+*/
+body::before {
+  content: "";
+  position: fixed; /* Se queda quieto */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  
+  /* TU GRADIENTE ORIGINAL */
   background: linear-gradient(270deg, #1d2b4a, #1a1a1a, #1d2b4a);
   background-size: 300% 300%;
   animation: moveGradient 15s ease infinite;
+  
+  /* Optimización GPU */
+  will-change: transform; 
+  pointer-events: none;
+}
+
+/* Restauramos tu fuente original (Arial) */
+body {
+  font-family: Arial, sans-serif;
+  color: #eee;
+  /* Quitamos el background de aquí porque ya está en ::before */
+  background: transparent;
   -webkit-font-smoothing: antialiased;
 }
+
 @keyframes moveGradient {
   0% { background-position: 0% 50% }
   50% { background-position: 100% 50% }
   100% { background-position: 0% 50% }
 }
 
-/* Contenedor principal de la App */
+/* Contenedor principal */
 .admin-page-container {
   min-height: 100vh;
   width: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
+  
+  /* Restauramos tu fondo y blur original */
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   box-sizing: border-box;
 }
 
-/* 2. TOP NAV (GLOBAL) */
-/* Estos estilos son para App.tsx */
+/* 2. TOP NAV (RESTAURADO AL ESTILO DE LA FOTO 2) */
 .top-nav {
   position: sticky;
   top: 0;
@@ -55,10 +74,13 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 10px 20px;
+  
+  /* ESTOS SON TUS VALORES ORIGINALES (Más claros y con sombra fuerte) */
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.4); /* Sombra fuerte */
+  
   z-index: 100;
 }
 
@@ -101,6 +123,9 @@ body {
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
+  
+  /* Aseguramos que use la fuente correcta */
+  font-family: Arial, sans-serif;
 }
 .nav-links button:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -112,10 +137,7 @@ body {
   font-weight: 700;
   box-shadow: 0 0 8px rgba(0, 123, 255, 0.09);
 }
-.nav-login-button {
-  background: rgba(255, 255, 255, 0.05);
-  font-weight: 700;
-}
+.nav-login-button,
 .nav-logout-button {
   background: rgba(255, 255, 255, 0.05);
   font-weight: 700;
@@ -138,7 +160,7 @@ body {
   z-index: 120;
 }
 
-/* 3. CONTENIDO PRINCIPAL (GLOBAL) */
+/* 3. CONTENIDO PRINCIPAL */
 .content-admin-page {
   flex: 1;
   padding: 28px;
@@ -153,8 +175,7 @@ h2 {
   scroll-margin-top: calc(var(--top-nav-height) + 12px);
 }
 
-
-/* 4. RESPONSIVE (SOLO PARA EL NAV/LAYOUT) */
+/* 4. RESPONSIVE */
 @media (max-width: 768px) {
   body {
     overflow-x: hidden;
@@ -204,5 +225,156 @@ h2 {
     margin-bottom: 10px;
     padding: 10px 12px;
     border-radius: 0;
+  }
+}
+
+/* --- NAV ACTUALIZADO --- */
+.nav-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Contenedor del Dropdown */
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  padding: 10px 0;
+}
+
+/* El texto que activa el menú */
+.dropdown-trigger {
+  color: #ccc;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.dropdown-container:hover .dropdown-trigger {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Estilo especial para cuando dice ADMIN */
+.dropdown-trigger.admin-active {
+  color: #00aaff; /* Azul para resaltar que eres Admin */
+  font-weight: bold;
+}
+
+/* El Menú Desplegable (Oculto por defecto) */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%); /* Centrado por defecto */
+  
+  background: #1e222d;
+  min-width: 180px; /* Un poco más compacto */
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 5px;
+  z-index: 200;
+  flex-direction: column;
+}
+
+/* Alineación especial para el último menú (Perfil) a la derecha */
+.dropdown-menu.right-aligned {
+  left: auto;
+  right: 0;
+  transform: none; /* Quitamos el centrado para pegarlo a la derecha */
+}
+
+/* Mostrar menú al hacer Hover */
+.dropdown-container:hover .dropdown-menu {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Botones dentro del Dropdown */
+.dropdown-menu button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 15px;
+  background: transparent;
+  border: none;
+  color: #ddd;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dropdown-menu button:hover {
+  background: var(--accent, #00aaff);
+  color: white;
+}
+
+.dropdown-menu button.active {
+  background: rgba(0, 170, 255, 0.2);
+  color: #00aaff;
+  font-weight: bold;
+}
+
+/* Botón de Salir (Rojo sutil al hover) */
+.logout-btn:hover {
+  background: #dc3545 !important;
+  color: white !important;
+}
+
+
+/* --- RESPONSIVE (Móvil) --- */
+@media (max-width: 768px) {
+  .dropdown-container {
+    display: block;
+    width: 100%;
+    padding: 0;
+  }
+  .dropdown-trigger {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 5px;
+    border-radius: 0;
+    color: var(--accent);
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    letter-spacing: 1px;
+  }
+  
+  .dropdown-menu {
+    display: flex;
+    position: static;
+    transform: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding-left: 15px;
+    width: 100%;
+  }
+  
+  .dropdown-container:hover .dropdown-menu {
+    animation: none;
+  }
+  
+  .dropdown-menu button {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
   }
 }

@@ -1,15 +1,19 @@
 /* --- Inventario.module.css --- */
 
-/* Contenedor "Glass" principal */
 .appContainer {
   width: 100%;
-  max-width: 1200px; /* Más ancho para la tabla */
+  max-width: 1200px;
   margin: 0 auto;
   
-  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  /* --- CAMBIO 1: FONDO MÁS SÓLIDO Y SIN BLUR --- */
+  /* Usamos un color oscuro con transparencia (85% opaco) */
+  background: rgba(30, 34, 45, 0.85); 
+  
+  /* Quitamos el backdrop-filter porque causa lag al hacer scroll sobre él */
+  /* backdrop-filter: blur(10px);  <-- BORRA O COMENTA ESTA LÍNEA */
+  
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); /* Sombra un poco más fuerte */
   border-radius: 12px;
   
   padding: 25px 40px;
@@ -35,7 +39,70 @@
   font-size: 0.9em;
 }
 
-/* Controles (Guardar, Importar, Exportar) */
+/* --- NUEVOS ESTILOS DE CONTROLES (Buscador + Botones) --- */
+.controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: space-between; /* Separa buscador a la izq y botones a la der */
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* Para pantallas pequeñas */
+}
+
+/* Estilo del Input de Búsqueda */
+.controls input[type="text"] {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #f0f0f0; /* Fondo claro */
+  color: #333;       /* Texto oscuro */
+  font-size: 1rem;
+  min-width: 300px;
+  flex-grow: 1; 
+  max-width: 500px;
+}
+.controls input[type="text"]::placeholder {
+  color: #666;
+}
+.controls input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Botones de Importar/Exportar (dentro de controls) */
+.importExportActions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.exportBtn,
+.importBtn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.importBtn {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+.exportBtn:hover { background-color: #e0e0e0; }
+.importBtn:hover { background-color: #218838; }
+.importBtn.disabled,
+.exportBtn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Botones Guardar/Cancelar (Panel separado) --- */
 .saveActions {
   background: rgba(0, 170, 255, 0.1);
   border: 1px solid rgba(0, 170, 255, 0.2);
@@ -75,40 +142,21 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-.importExportActions {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.exportBtn,
-.importBtn {
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #ccc;
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.9em;
-  cursor: pointer;
-}
-.importBtn {
-  background-color: #28a745;
-  border-color: #28a745;
-  color: white;
-}
-.exportBtn:hover { background-color: #e0e0e0; }
-.importBtn:hover { background-color: #218838; }
-.importBtn.disabled,
-.exportBtn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Contenedor de la Tabla */
 .tableContainer {
   width: 100%;
   overflow-x: auto;
+}
+.tableContainer tbody tr {
+  /* --- CAMBIO 2: OPTIMIZACIÓN DE RENDERIZADO --- */
+  /* Esto ayuda a la GPU a manejar el movimiento */
+  will-change: transform, opacity;
+  
+  /* Esto evita que el navegador calcule filas que están fuera de la pantalla */
+  content-visibility: auto; 
+  
+  /* Le damos una altura estimada a la fila para que el scroll no salte (ajusta según tu diseño) */
+  contain-intrinsic-size: 50px; 
 }
 .tableContainer table {
   width: 100%;
@@ -135,9 +183,9 @@
   border-bottom: none;
 }
 .tableContainer tr:hover {
+  /* Hacemos el hover más ligero (sin blur ni efectos locos) */
   background-color: rgba(255, 255, 255, 0.08);
 }
-
 /* Fila en modo Edición */
 .editingRow {
   background-color: rgba(0, 170, 255, 0.1) !important;
@@ -197,4 +245,19 @@
 }
 .toggleVisibilityBtn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .controls input[type="text"] {
+    max-width: 100%;
+    min-width: auto;
+  }
+  .importExportActions {
+    justify-content: space-between;
+  }
 }

@@ -1,6 +1,6 @@
 /* --- RegistrarPrestamo.module.css --- */
 
-/* --- 2. CONTENEDOR PRINCIPAL "DE VIDRIO" --- */
+/* --- CONTENEDOR PRINCIPAL --- */
 .appContainer {
   width: 100%;
   max-width: 800px;
@@ -11,31 +11,56 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* Centra y estira el contenido */
+  box-sizing: border-box;
 }
 
-/* --- 3. CABECERA --- */
+/* --- CABECERA --- */
 .appContainer header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding-bottom: 20px;
   margin-bottom: 20px;
-}
-.appContainer header h1 {
-  margin: 10px 0 0 0;
-  color: #ffffff;
-  font-weight: 300;
-  letter-spacing: 1px;
+  width: 100%;
 }
 
-/* --- 4. ESTILOS DE FORMULARIO (Minimalista) --- */
+.appContainer header h1 {
+  margin: 0;
+  color: #ffffff;
+  font-weight: 200;
+  text-align: left;
+  font-size: 1.2em;
+}
+
+/* Checkbox de Profesor */
+.profesorCheck {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+/* --- FORMULARIO Y INPUTS --- */
+.formularioPrestamo {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .formularioPrestamo fieldset {
   border: none;
   padding: 0;
   margin-bottom: 20px;
+  width: 100%;
 }
-.formularioPrestamo div {
-  margin-bottom: 15px;
+
+.formGroup {
+  width: 100%;
+  margin-bottom: 15px !important;
 }
+
 .formularioPrestamo label {
   display: block;
   margin-bottom: 8px;
@@ -44,11 +69,10 @@
   font-size: 0.9em;
 }
 
-/* Inputs de "Vidrio" */
 .formularioPrestamo input[type="text"],
 .formularioPrestamo input[type="number"],
 .formularioPrestamo select {
-  width: 100%;
+  width: 100%; /* Ocupa todo el ancho del padre */
   padding: 12px;
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.1);
@@ -57,11 +81,9 @@
   color: #eee;
   font-family: Arial, sans-serif;
   font-size: 1em;
-  color-scheme: dark; /* Íconos claros */
+  color-scheme: dark;
 }
-.formularioPrestamo input::placeholder {
-  color: #ccc;
-}
+
 .formularioPrestamo input:focus,
 .formularioPrestamo select:focus {
   outline: none;
@@ -69,112 +91,45 @@
   box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
 }
 
-/* Fila de 3 campos */
+/* Campos deshabilitados */
+.formularioPrestamo input:disabled,
+.formularioPrestamo select:disabled {
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: #666 !important;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Fila de campos en paralelo */
 .formRow {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-}
-.formGroup {
-  flex: 1;
-  min-width: 150px;
-  margin-bottom: 0 !important;
-}
-.formGroup input {
   width: 100%;
 }
-
-/* --- 5. BÚSQUEDA Y LISTA DE ITEMS (Estilo "Vidrio") --- */
-.searchResults {
-  margin-top: 5px;
-  display: flex;
-  flex-direction: column;
-}
-.searchResultItem {
-  background-color: rgba(0, 123, 255, 0.3);
-  border: 1px solid rgba(0, 123, 255, 0.5);
-  color: #eee;
-  padding: 8px;
-  margin-top: 5px;
-  cursor: pointer;
-  text-align: left;
-  border-radius: 4px;
-}
-.searchResultItem:hover {
-  background-color: rgba(0, 123, 255, 0.5);
+.formRow .formGroup {
+  flex: 1;
+  min-width: 150px;
 }
 
-.listaSolicitud h4 {
-  margin-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-  padding-top: 15px;
-}
-.listaSolicitud p {
-  color: #888;
-}
-.solicitudItemsList {
-  list-style-type: none;
-  padding-left: 0;
-}
-
-.solicitudItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background-color: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-.itemName {
-  font-weight: bold;
-}
-.itemControls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.itemControls label {
-  font-size: 0.9em;
-  color: #ccc !important;
-  margin-bottom: 0 !important;
-}
-.itemQuantity {
-  width: 70px !important;
-  text-align: center;
-  padding: 5px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #eee;
-}
-.itemQuantity::placeholder {
-  color: #ccc;
-}
-
-.removeBtn {
-  background-color: #dc3545;
-  border: none;
-  color: white;
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: auto;
-}
-.removeBtn:hover {
-  background-color: #c82333;
-}
-
-/* --- 6. ACORDEÓN (Minimalista) --- */
+/* --- ACORDEÓN --- */
 .accordionItem {
-  border: none;
+  width: 100%;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   margin-bottom: 10px;
   background-color: transparent;
-  border-radius: 0;
+  box-sizing: border-box;
 }
+
+.accordionItem.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .accordionHeader {
-  padding: 15px 10px;
+  width: 100%;
+  padding: 15px 20px;
   margin: 0;
   cursor: pointer;
   display: flex;
@@ -182,21 +137,17 @@
   align-items: center;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
+  box-sizing: border-box;
 }
+
 .accordionHeader:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
-.accordionHeader span {
-  font-size: 1.2em;
-}
+
 .accordionContent {
-  padding: 20px 10px 10px 10px;
-  border-top: none;
-}
-.accordionContent fieldset {
-  margin: 0;
-  padding: 0;
-  border: none;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .nextBtn {
@@ -210,15 +161,14 @@
   float: right;
   margin-top: 10px;
 }
-.nextBtn:hover {
-  background-color: #0056b3;
-}
+.nextBtn:hover { background-color: #0056b3; }
 
-/* --- 7. SELECCIÓN DE TIPO --- */
+/* --- SELECCIÓN DE TIPO (Radio Buttons) --- */
 .tipoSolicitudSelector {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  width: 100%;
 }
 .tipoSolicitudSelector label {
   flex: 1;
@@ -231,92 +181,305 @@
   font-weight: bold;
   transition: all 0.2s ease;
 }
-.tipoSolicitudSelector input[type="radio"] {
-  display: none;
-}
-.tipoSolicitudSelector label:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
+.tipoSolicitudSelector input { display: none; }
+.tipoSolicitudSelector label:hover { background-color: rgba(255, 255, 255, 0.2); }
 .tipoSolicitudSelector label.active {
-  background-color: #007bff; /* Azul sólido al seleccionar */
+  background-color: #007bff;
   border-color: #007bff;
   color: white;
 }
 
-/* --- 8. CAMPOS DESHABILITADOS Y OCULTOS --- */
+/* Animación campos ocultos */
 .camposEquipo {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease-out;
 }
-.camposEquipo.visible {
-  max-height: 500px; /* Altura suficiente para mostrar los campos */
-}
-.formularioPrestamo input:disabled,
-.formularioPrestamo select:disabled {
-  background: rgba(0, 0, 0, 0.2) !important;
-  color: #666 !important;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+.camposEquipo.visible { max-height: 500px; }
 
 
-/* --- 9. BOTÓN DE ENVÍO (Verde, como en App.css) --- */
+/* --- BÚSQUEDA Y RESULTADOS --- */
+.searchResults {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.searchResultItem {
+  background-color: rgba(0, 123, 255, 0.3);
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  color: #eee;
+  padding: 10px;
+  margin-top: 5px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+}
+.searchResultItem:hover { background-color: rgba(0, 123, 255, 0.5); }
+
+/* --- LISTA DE ITEMS (Carrito) --- */
+.listaSolicitud h4 {
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 15px;
+}
+.solicitudItemsList {
+  list-style-type: none;
+  padding-left: 0;
+  width: 100%;
+}
+.solicitudItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.itemName { font-weight: bold; }
+.itemControls { display: flex; align-items: center; gap: 10px; }
+.itemQuantity {
+  width: 60px !important;
+  text-align: center;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #eee;
+}
+.removeBtn {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.removeBtn:hover { background-color: #c82333; }
+
+
+/* --- SECCIÓN DE ITEMS EXISTENTES (Modo Edición) --- */
+.existingItemsSection {
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+}
+.existingItemsSection h3 {
+  margin-top: 0;
+  font-size: 1rem;
+  color: #ffd700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+.existingItemsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.existingItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+.devolverItemBtn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+.devolverItemBtn:hover { background-color: #218838; }
+.devolverItemBtn:disabled { background-color: #555; opacity: 0.6; cursor: not-allowed; }
+
+
+/* --- BOTÓN SUBMIT GLOBAL --- */
 .submitBtn {
   width: 100%;
   padding: 15px;
   font-size: 16px;
   font-weight: bold;
-  background-color: #28a745; /* Verde sólido */
+  background-color: #28a745;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
   margin-top: 20px;
+  transition: background 0.2s;
 }
-.submitBtn:disabled {
-  background-color: #555;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-.submitBtn:not(:disabled):hover {
-  background-color: #218838;
-}
+.submitBtn:hover { background-color: #218838; }
+.submitBtn:disabled { background-color: #555; opacity: 0.7; cursor: not-allowed; }
 
-/* --- AÑADIR AL FINAL --- */
-
-/* Estilo para el header (alinear H1 y Checkbox) */
-.appContainer header {
+/* Contenedor que alinea el texto y el switch */
+.toggleContainer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-}
-.appContainer header h1 {
-  margin: 0; /* Quita el margen original */
+  gap: 12px;
 }
 
-/* Estilo para el Checkbox de Profesor */
-.profesorCheck {
-  /* Tamaño y apariencia */
-  width: 24px;
-  height: 24px;
+.toggleLabel {
+  font-size: 0.9em;
+  color: #ccc;
+  font-weight: 600;
+}
+
+/* El contenedor del switch (la "cápsula") */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+/* Ocultamos el input checkbox original */
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* El riel (track) del slider */
+.slider {
+  position: absolute;
   cursor: pointer;
-  
-  /* Tooltip (el 'title' se pone en el JSX) */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2); /* Gris transparente (Glass) */
+  transition: .4s;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Estilo para deshabilitar una sección del acordeón */
-.accordionItem.disabled {
-  opacity: 0.5;
+/* El botón circular (knob) */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 3px; /* Ajuste fino para centrado vertical */
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Sombrita para efecto 3D */
+}
+
+/* Estado ACTIVO (Azul) */
+.switch input:checked + .slider {
+  background-color: #007bff; /* Tu azul corporativo */
+  border-color: #0056b3;
+}
+
+/* Movimiento del botón cuando está activo */
+.switch input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* Efecto de foco para accesibilidad */
+.switch input:focus + .slider {
+  box-shadow: 0 0 1px #007bff;
+}
+
+/* --- AGREGAR AL FINAL DE RegistrarPrestamo.module.css --- */
+
+/* Bloque de Información del Usuario (Solo Edición) */
+.userInfoBlock {
+  background: rgba(0, 170, 255, 0.1); /* Azul muy suave */
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.userInfoBlock h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.userInfoBlock p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #aaa;
+  font-family: monospace;
+}
+
+/* Estado BLOQUEADO para los acordeones */
+.accordionItem.locked {
+  opacity: 0.5; /* Se ve apagado */
+  pointer-events: none; /* No se puede clicar */
+  filter: grayscale(0.8); /* Se ve gris */
+  transition: all 0.3s ease;
+}
+
+/* Cabecera visual cuando está bloqueado */
+.accordionItem.locked .accordionHeader {
+  background-color: rgba(0, 0, 0, 0.2);
   cursor: not-allowed;
-  pointer-events: none; /* Evita clics */
 }
 
-/* (Opcional) Si quieres un look más "deshabilitado" */
-/*
-.accordionItem.disabled .accordionHeader {
-  background-color: rgba(0, 0, 0, 0.1); 
+/* Ajuste para la lista de items existentes dentro del bloque */
+.userInfoBlock .existingItemsSection {
+  margin-top: 15px;
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
 }
-*/
+
+/* --- RegistrarPrestamo.module.css --- */
+
+/* Contenedor vertical para el Switch y su etiqueta inferior */
+.profesorToggleGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centrado respecto al switch */
+  justify-content: center;
+  min-width: 80px; /* Espacio reservado para que no baile */
+}
+
+/* El texto de notificación que aparece abajo */
+.profesorBadge {
+  margin-top: 5px;
+  font-size: 0.75em;
+  color: #00aaff; /* Azul brillante */
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: fadeIn 0.3s ease;
+  white-space: nowrap;
+}
+
+/* Animación suave para que no aparezca de golpe */
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(-3px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+/* Ajuste del Switch para que encaje bien solo */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+  margin-bottom: 2px;
+}

@@ -4,7 +4,6 @@ import type { MultiValue } from 'react-select';
 import toast from 'react-hot-toast';
 import styles from './RegistrarPractica.module.css';
 
-
 // --- DATOS ESTÁTICOS ---
 const CARRERAS = [
   'Ingeniería Mecatrónica', 'Arquitectura', 'Ingeniería Eléctrica', 'Ingeniería Electrónica',
@@ -35,14 +34,12 @@ interface Option { label: string; value: string; }
 interface Producto { id: number; nombre_equipo: string; }
 type Seccion = 'general' | 'academico' | 'detalles' | '';
 
-// --- NUEVAS PROPS ---
 interface RegistrarPracticaProps { 
   apiUrl: string;
-  practicaId: number | null; // ID para editar (o null si es nueva)
-  onPracticaSaved: () => void; // Función para llamar al guardar/modificar
+  practicaId: number | null; 
+  onPracticaSaved: () => void; 
 }
 
-// --- Tipo para la data de Práctica (de la API) ---
 interface PracticaData {
   id: number;
   nombre_profesor: string;
@@ -59,10 +56,10 @@ interface PracticaData {
   observaciones: string;
   equipos: string[];
   materiales: string[];
-  solicitud_uuid: string | null; // CLAVE
+  solicitud_uuid: string | null; 
 }
 
-// --- Funciones Helper para Fecha/Hora ---
+// --- Funciones Helper ---
 const getTodayDate = () => {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -74,31 +71,23 @@ const getRoundedTime = () => {
   const now = new Date();
   let hours = now.getHours();
   const minutes = now.getMinutes();
-  if (minutes >= 50) {
-    hours = (hours + 1) % 24;
-  }
-  const hh = String(hours).padStart(2, '0');
-  return `${hh}:00`;
+  if (minutes >= 50) hours = (hours + 1) % 24;
+  return `${String(hours).padStart(2, '0')}:00`;
 };
 const getRoundedTimePlusTwo = () => {
   const now = new Date();
   let hours = now.getHours();
   const minutes = now.getMinutes();
-  if (minutes >= 50) {
-    hours = (hours + 1) % 24;
-  }
-  const endHours = (hours + 2) % 24;
-  const hh = String(endHours).padStart(2, '0');
-  return `${hh}:00`;
+  if (minutes >= 50) hours = (hours + 1) % 24;
+  return `${String((hours + 2) % 24).padStart(2, '0')}:00`;
 };
 
 // --- COMPONENTE PRINCIPAL ---
 function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPracticaProps) {
   
-  // --- ESTADO DE EDICIÓN ---
   const isEditing = practicaId !== null;
 
-  // --- ESTADOS ---
+  // Estados del Formulario
   const [nombreProfesor, setNombreProfesor] = useState('');
   const [noPractica, setNoPractica] = useState(1);
   const [fechaPractica, setFechaPractica] = useState(getTodayDate());
@@ -124,10 +113,10 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   const [loading, setLoading] = useState(false);
   const [seccionAbierta, setSeccionAbierta] = useState<Seccion>('general');
 
-  // CLAVE: Estado para guardar el UUID existente
+  // Estado para el UUID
   const [solicitudUuidExistente, setSolicitudUuidExistente] = useState<string | null>(null);
   
-  // --- LÓGICA DE CARGA DE INVENTARIO ---
+  // Carga de Inventario
   useEffect(() => {
     const fetchInventario = async () => {
       try {
@@ -139,22 +128,21 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
            setEquipoOptions(options); 
            setMaterialOptions(options);
         }
-      } catch (error) { console.error("Error al cargar inventario para sugerencias:", error); }
+      } catch (error) { console.error("Error al cargar inventario:", error); }
     };
     fetchInventario();
   }, [apiUrl]);
 
-  // --- USEEFFECT (Para cargar datos en modo Edición) ---
+  // Carga de Datos en Edición
   useEffect(() => {
     if (isEditing && practicaId) {
       const fetchPracticaData = async () => {
         setLoading(true);
         try {
           const res = await fetch(`${apiUrl}/api/practicas/${practicaId}`);
-          if (!res.ok) throw new Error('No se pudo cargar la práctica a editar');
+          if (!res.ok) throw new Error('No se pudo cargar la práctica');
           const data: PracticaData = await res.json();
           
-          // Rellena el formulario
           setNombreProfesor(data.nombre_profesor);
           setNoPractica(data.no_practica);
           setFechaPractica(data.fecha_practica.split('T')[0]);
@@ -171,13 +159,11 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
           setSelectedEquipos(data.equipos.map(e => ({ label: e, value: e })));
           setSelectedMateriales(data.materiales.map(m => ({ label: m, value: m })));
           
-          // CLAVE: Guardar el UUID existente para reutilizarlo
           setSolicitudUuidExistente(data.solicitud_uuid);
-
           setSeccionAbierta('general');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Error al cargar datos');
-          onPracticaSaved(); // Regresa al historial si falla
+          onPracticaSaved(); 
         } finally {
           setLoading(false);
         }
@@ -186,9 +172,9 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     }
   }, [practicaId, isEditing, apiUrl, onPracticaSaved]);
 
-  // --- LÓGICA DE AUTO-INCREMENTO (Deshabilitada en modo edición) ---
+  // Handlers
   const handleProfesorBlur = async () => {
-    if (isEditing) return; // No auto-incrementar si estamos editando
+    if (isEditing) return; 
     if (!nombreProfesor.trim()) return;
     const nombreMayus = nombreProfesor.toUpperCase();
     setNombreProfesor(nombreMayus);
@@ -196,52 +182,40 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       const res = await fetch(`${apiUrl}/api/profesor/${encodeURIComponent(nombreMayus)}/ultima-practica`);
       if (res.ok) {
         const data = await res.json();
-        const siguientePractica = (data.ultimo_no_practica || 0) + 1;
-        setNoPractica(siguientePractica);
-        toast(`Siguiente práctica: #${siguientePractica}`, { icon: '🔢' });
+        setNoPractica((data.ultimo_no_practica || 0) + 1);
+        toast(`Siguiente práctica: #${(data.ultimo_no_practica || 0) + 1}`, { icon: '🔢' });
       }
-    } catch (error) { console.error("Error al obtener última práctica:", error); }
+    } catch (error) { console.error(error); }
   };
 
-  // --- OTROS MANEJADORES ---
   const handleCarreraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCarrera(e.target.value); setAsignatura('');
   };
-  const handleNext = (next: Seccion) => {
-    setSeccionAbierta(next);
-  };
+  const handleNext = (next: Seccion) => setSeccionAbierta(next);
+  
   const handleAlumnosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (val === '') { setNoAlumnos(''); return; }
     let num = parseInt(val);
     if (isNaN(num)) return;
-    if (num > 30) num = 30;
-    if (num < 1) num = 1;
-    setNoAlumnos(num);
+    setNoAlumnos(Math.max(1, Math.min(30, num)));
   };
-  const handleAlumnosBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const num = parseInt(String(noAlumnos));
-    if (isNaN(num) || num < 1) {
-      setNoAlumnos(1);
-    }
+  const handleAlumnosBlur = () => {
+    if (isNaN(parseInt(String(noAlumnos))) || Number(noAlumnos) < 1) setNoAlumnos(1);
   };
 
- // --- FUNCIÓN DE ENVÍO (CORREGIDA PARA SOPORTAR EDICIÓN Y REUTILIZAR UUID) ---
+  // --- SUBMIT ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validaciones (sin cambios)
     if (!nombreProfesor || !fechaPractica || !horaInicio || !horaFin || !asignatura || !nombrePractica) {
       toast.error("Completa todos los campos obligatorios."); return;
     }
     if (selectedEquipos.length === 0 && selectedMateriales.length === 0) {
-      toast.error("Debes añadir al menos un Equipo o un Material a la práctica."); 
-      setSeccionAbierta('detalles');
-      return;
+      toast.error("Debes añadir al menos un Equipo o un Material."); 
+      setSeccionAbierta('detalles'); return;
     }
 
     setLoading(true);
-
     const grupoFinal = grupo.trim() === '' ? '0A' : grupo.trim().toUpperCase();
     const materialesArray = selectedMateriales.map(option => option.value);
     const equiposArray = selectedEquipos.map(option => option.value);
@@ -250,107 +224,70 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     const promesasDePrestamo: Promise<Response>[] = [];
 
     try {
-      // --- LÓGICA DE UUID ---
+      // 1. Determinar UUID
       if (isEditing) {
-        // En edición, reutiliza el UUID existente. CLAVE para evitar duplicados.
         finalSolicitudUuid = solicitudUuidExistente; 
       } else if (materialesArray.length > 0) {
-        // En registro nuevo, solo genera si hay materiales
         finalSolicitudUuid = crypto.randomUUID(); 
       }
 
-      // --- PASO 1: CREAR PRÉSTAMOS (Solo en modo NUEVO) ---
-      // Si estamos editando, NO creamos nuevos préstamos aquí.
-      // El backend sincronizará los datos del profesor/materia/grupo si el UUID ya existe.
+      // 2. Crear Préstamos (SOLO SI ES NUEVO REGISTRO)
       if (!isEditing && materialesArray.length > 0) {
-        
         for (const nombreMaterial of materialesArray) {
           const producto = productosApi.find(p => p.nombre_equipo === nombreMaterial);
-          if (!producto || !producto.id) {
-            throw new Error(`ID no encontrado para: "${nombreMaterial}".`);
-          }
-          const prestamoBody = {
-            producto_id: producto.id,
-            nombre_persona: nombreProfesor.toUpperCase().trim(),
-            numero_de_control: null,
-            integrantes: 1, 
-            cantidad: 1, 
-            materia: asignatura,
-            grupo: grupoFinal,
-            solicitud_uuid: finalSolicitudUuid, // Usa el UUID generado
-            nombre_profesor: nombreProfesor.toUpperCase().trim()
-          };
-          promesasDePrestamo.push(
-            fetch(`${apiUrl}/api/prestamos`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(prestamoBody)
+          if (!producto || !producto.id) throw new Error(`ID no encontrado para: "${nombreMaterial}".`);
+          
+          promesasDePrestamo.push(fetch(`${apiUrl}/api/prestamos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              producto_id: producto.id,
+              nombre_persona: nombreProfesor.toUpperCase().trim(),
+              numero_de_control: null,
+              integrantes: 1, cantidad: 1, 
+              materia: asignatura, grupo: grupoFinal,
+              solicitud_uuid: finalSolicitudUuid, 
+              nombre_profesor: nombreProfesor.toUpperCase().trim()
             })
-          );
+          }));
         }
-        
-        // Esperamos a que TODOS los préstamos se completen
-        const prestamoResponses = await Promise.all(promesasDePrestamo);
-        const prestamoFallo = prestamoResponses.some(res => !res.ok);
-        
-        if (prestamoFallo) {
-          const failedResponse = prestamoResponses.find(res => !res.ok);
-          let errorMsg = 'No se pudieron crear los préstamos de material.';
-          if (failedResponse) {
-            try {
-              const errorData = await failedResponse.json();
-              errorMsg = errorData.err || errorData.message || errorMsg;
-            } catch (e) {}
-          }
-          throw new Error(errorMsg);
-        }
+        const responses = await Promise.all(promesasDePrestamo);
+        if (responses.some(res => !res.ok)) throw new Error('Error al crear préstamos.');
       }
       
-      // --- PASO 2: Crear/Modificar la Práctica ---
-      const method = isEditing ? 'PUT' : 'POST'; // <-- CLAVE: Determinar el método HTTP
+      // 3. Crear/Modificar Práctica
+      const method = isEditing ? 'PUT' : 'POST';
       const url = isEditing ? `${apiUrl}/api/practicas/${practicaId}` : `${apiUrl}/api/practicas`;
 
-      const formData = {
-        nombre_profesor: nombreProfesor.toUpperCase().trim(), 
-        fecha_practica: fechaPractica, 
-        hora_inicio: horaInicio, 
-        hora_fin: horaFin,
-        carrera: carrera, 
-        asignatura: asignatura, 
-        grupo: grupoFinal,
-        no_practica: noPractica, 
-        no_alumnos: Number(noAlumnos),
-        nombre_practica: nombrePractica.trim(), 
-        objetivo: objetivo.trim(), 
-        observaciones: observaciones.trim(),
-        equipo_requerido: equiposArray,
-        material_utilizado: materialesArray,
-        solicitud_uuid: finalSolicitudUuid // CLAVE: Se envía el UUID (ya sea nuevo o el existente)
-      };
-
       const practicaResponse = await fetch(url, { 
-        method: method, // <-- CLAVE: PUT o POST
+        method, 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(formData) 
+        body: JSON.stringify({
+          nombre_profesor: nombreProfesor.toUpperCase().trim(), 
+          fecha_practica: fechaPractica, hora_inicio: horaInicio, hora_fin: horaFin,
+          carrera: carrera, asignatura: asignatura, grupo: grupoFinal,
+          no_practica: noPractica, no_alumnos: Number(noAlumnos),
+          nombre_practica: nombrePractica.trim(), 
+          objetivo: objetivo.trim(), observaciones: observaciones.trim(),
+          equipo_requerido: equiposArray, material_utilizado: materialesArray,
+          solicitud_uuid: finalSolicitudUuid
+        }) 
       });
 
-      if (!practicaResponse.ok) {
-        let errorMsg = `Error al ${isEditing ? 'modificar' : 'registrar'} la práctica.`;
-        try {
-          const errorData = await practicaResponse.json();
-          errorMsg = errorData.err || errorData.message || errorMsg;
-        } catch (e) {}
-        throw new Error(errorMsg);
-      }
+      const responseData = await practicaResponse.json();
+      if (!practicaResponse.ok) throw new Error(responseData.err || responseData.message || 'Error al guardar práctica.');
       
-      // --- PASO 3: Éxito ---
       toast.success(isEditing ? '¡Modificación guardada!' : `¡Práctica #${noPractica} registrada!`);
       
-      // Si estamos editando, llamamos a la función de guardado para volver al historial
+      // --- ACTUALIZACIÓN CLAVE ---
+      // Si el backend nos devolvió un nuevo UUID (porque agregamos material al editar), lo guardamos.
+      if (isEditing && responseData.uuid) {
+        setSolicitudUuidExistente(responseData.uuid);
+      }
+
       if (isEditing) {
         onPracticaSaved(); 
       } else {
-        // Reseteo solo si es registro nuevo
         setNombrePractica(''); setObjetivo(''); setObservaciones(''); 
         setSelectedEquipos([]); setSelectedMateriales([]); 
         setNoPractica(prev => prev + 1);
@@ -362,14 +299,11 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       }
 
     } catch (error) {
-      console.error("Error al enviar:", error);
+      console.error("Error:", error);
       toast.error(`Error: ${error instanceof Error ? error.message : 'Desconocido'}`);
-    } finally { 
-      setLoading(false); 
-    }
+    } finally { setLoading(false); }
   };
 
-  // --- ESTILOS DE REACT-SELECT (Sin cambios) ---
   const reactSelectStyles = {
     control: (base: any, state: any) => ({
       ...base,
@@ -380,27 +314,17 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       padding: '5px 6px',
       borderRadius: '8px',
       minHeight: '48px',
-      '&:hover': {
-        borderColor: 'rgba(0, 170, 255, 0.18)',
-      },
+      '&:hover': { borderColor: 'rgba(0, 170, 255, 0.18)' },
     }),
     menu: (base: any) => ({
-      ...base,
-      backgroundColor: '#1e222d',
+      ...base, backgroundColor: '#1e222d',
       border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.14))',
-      color: '#eee',
-      borderRadius: '8px',
-      overflow: 'hidden',
+      color: '#eee', borderRadius: '8px', overflow: 'hidden',
     }),
     option: (base: any, state: any) => ({
-      ...base,
-      backgroundColor: state.isFocused ? 'rgba(0, 123, 255, 0.2)' : 'transparent',
-      color: '#eee',
+      ...base, backgroundColor: state.isFocused ? 'rgba(0, 123, 255, 0.2)' : 'transparent', color: '#eee',
     }),
-    multiValue: (base: any) => ({ 
-        ...base, 
-        backgroundColor: '#004a7c',
-    }),
+    multiValue: (base: any) => ({ ...base, backgroundColor: '#004a7c' }),
     multiValueLabel: (base: any) => ({ ...base, color: '#fff' }),
     input: (base: any) => ({ ...base, color: '#eee' }),
     placeholder: (base: any) => ({ ...base, color: '#888' }),
@@ -410,16 +334,13 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   return (
     <div className={styles.appContainer}>
       <header>
-        {/* Título dinámico */}
         <h1>{isEditing ? `Modificar Práctica #${noPractica}` : 'Registrar Nueva Práctica'}</h1>
       </header>
 
-      {/* Muestra un spinner si está cargando datos para editar */}
       {loading && isEditing && <p>Cargando datos de la práctica...</p>}
 
       <form onSubmit={handleSubmit} className={styles.formularioPrestamo}>
         
-        {/* --- SECCIÓN 1: DATOS GENERALES --- */}
         <div className={styles.accordionItem}>
           <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('general')}>
             1. Datos Generales
@@ -427,41 +348,31 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
           </h3>
           <div className={`${styles.accordionContent} ${seccionAbierta === 'general' ? styles.open : ''}`}>
             <fieldset>
-              
               <div className={`${styles.formRow} ${styles.cols1}`}> 
                 <div className={styles.formGroup}>
                   <label htmlFor="profesor">Nombre del Profesor:</label>
-                  {/* Deshabilitado en modo edición */}
                   <input id="profesor" type="text" value={nombreProfesor} onChange={(e) => setNombreProfesor(e.target.value)} onBlur={handleProfesorBlur} placeholder="Ingrese su nombre completo" required disabled={isEditing} />
                 </div>
               </div>
-
               <div className={`${styles.formRow} ${styles.cols3}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="fecha">Fecha:</label>
-                  {/* Deshabilitado en modo edición */}
                   <input id="fecha" type="date" value={fechaPractica} onChange={(e) => setFechaPractica(e.target.value)} required disabled={isEditing} />
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="horaInicio">Hora Inicio:</label>
-                  {/* Deshabilitado en modo edición */}
                   <input id="horaInicio" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} required disabled={isEditing} />
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="horaFin">Hora Fin (Auto):</label>
-                  {/* PERMITIDO en modo edición */}
                   <input id="horaFin" type="time" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} required />
                 </div>
               </div>
-
-              <button type="button" className={styles.nextBtn} onClick={() => handleNext('academico')}>
-                Siguiente ▼
-              </button>
+              <button type="button" className={styles.nextBtn} onClick={() => handleNext('academico')}>Siguiente ▼</button>
             </fieldset>
           </div>
         </div>
 
-        {/* --- SECCIÓN 2: DATOS ACADÉMICOS --- */}
         <div className={styles.accordionItem}>
           <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('academico')}>
             2. Datos Académicos
@@ -472,35 +383,28 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
               <div className={`${styles.formRow} ${styles.cols2}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="carrera">Carrera:</label>
-                  {/* Deshabilitado en modo edición */}
                   <select id="carrera" value={carrera} onChange={handleCarreraChange} required disabled={isEditing}> {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)} </select>
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="asignatura">Asignatura:</label>
-                  {/* PERMITIDO en modo edición */}
                   <select id="asignatura" value={asignatura} onChange={(e) => setAsignatura(e.target.value)} required> <option value="">-- Selecciona Asignatura --</option> {(ASIGNATURAS[carrera] || []).map(asig => ( <option key={asig} value={asig}>{asig}</option> ))} </select>
                 </div>
               </div>
               <div className={`${styles.formRow} ${styles.cols2}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="grupo">Grupo:</label>
-                  {/* PERMITIDO en modo edición */}
                   <input id="grupo" type="text" value={grupo} onChange={(e) => setGrupo(e.target.value.toUpperCase())} placeholder="Ej.0A" style={{ textTransform: 'uppercase' }} />
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="noAlumnos">No. Alumnos (1-30):</label>
-                  {/* Deshabilitado en modo edición */}
                   <input id="noAlumnos" type="number" value={noAlumnos} onChange={handleAlumnosChange} onBlur={handleAlumnosBlur} min="1" max="30" inputMode="numeric" pattern="[0-9]*" required disabled={isEditing} />
                 </div>
               </div>
-              <button type="button" className={styles.nextBtn} onClick={() => handleNext('detalles')}>
-                Siguiente ▼
-              </button>
+              <button type="button" className={styles.nextBtn} onClick={() => handleNext('detalles')}>Siguiente ▼</button>
             </fieldset>
           </div>
         </div>
 
-        {/* --- SECCIÓN 3: DETALLES DE LA PRÁCTICA --- */}
         <div className={styles.accordionItem}>
           <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('detalles')}>
             3. Equipos, Materiales y Objetivos
@@ -511,32 +415,25 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
               <div className={`${styles.formRow} ${styles.cols1}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="nombrePractica">Nombre de la Práctica:</label>
-                  {/* PERMITIDO en modo edición */}
                   <input id="nombrePractica" type="text" value={nombrePractica} onChange={(e) => setNombrePractica(e.target.value)} placeholder="Actividad a realizar..." required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Equipo Requerido:</label>
-                  {/* PERMITIDO en modo edición */}
                   <CreatableSelect isMulti options={equipoOptions} value={selectedEquipos} onChange={(newValue) => setSelectedEquipos(newValue)} placeholder="Salon o área de uso..." formatCreateLabel={(inputValue) => `Crear nuevo: "${inputValue}"`} styles={reactSelectStyles} />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Material Utilizado (caseta):</label>
-                  {/* PERMITIDO en modo edición */}
                   <CreatableSelect isMulti options={materialOptions} value={selectedMateriales} onChange={(newValue) => setSelectedMateriales(newValue)} placeholder="Material requerido de caseta..." formatCreateLabel={(inputValue) => `Crear nuevo: "${inputValue}"`} styles={reactSelectStyles} />
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="objetivo">Objetivo:</label>
-                  {/* PERMITIDO en modo edición */}
                   <textarea id="objetivo" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} rows={3} placeholder="Describe el objetivo de la práctica..." />
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="observaciones">Observaciones:</label>
-                  {/* PERMITIDO en modo edición */}
                   <textarea id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={3} placeholder="Añade notas o comentarios adicionales, instalaciones dañadas o equipo faltante..." />
                 </div>
               </div>
-
-              {/* Botón dinámico */}
               <button type="submit" className={styles.submitBtn} disabled={loading}>
                 {loading ? (isEditing ? 'Modificando...' : 'Registrando...') : (isEditing ? 'Guardar Modificaciones' : 'Registrar Práctica')}
               </button>
