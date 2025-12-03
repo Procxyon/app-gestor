@@ -261,3 +261,64 @@
     justify-content: space-between;
   }
 }
+/* --- AGREGAR AL FINAL DE Inventario.module.css --- */
+
+/* Alerta de items en préstamo */
+.alertaPrestamo {
+    color: #ff4d4d; /* Rojo brillante */
+    font-weight: bold;
+    font-size: 1.1em;
+    text-shadow: 0 0 5px rgba(255, 77, 77, 0.3);
+}
+
+/* Badge de Disponibles */
+.badgeDisponible {
+    font-weight: bold;
+    color: #aaffaa;
+}
+.badgeDisponible.agotado {
+    color: #888;
+    font-weight: normal;
+}
+
+/* Botones de Tipo (Equipo vs Material) */
+.tipoBadge {
+    border: none;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.tipoEquipo {
+    background-color: rgba(0, 123, 255, 0.2);
+    color: #66b2ff;
+    border: 1px solid rgba(0, 123, 255, 0.4);
+}
+.tipoEquipo:hover {
+    background-color: rgba(0, 123, 255, 0.4);
+}
+
+.tipoMaterial {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.4);
+}
+.tipoMaterial:hover {
+    background-color: rgba(255, 193, 7, 0.3);
+}
+
+/* ... estilos previos ... */
+
+.badgeDisponible.negativo {
+    color: #ff4d4d;       /* Mismo rojo que la alerta de préstamos */
+    font-weight: 800;     /* Extra negrita para resaltar el error */
+    background: rgba(255, 77, 77, 0.1); /* Un fondo rojo muy sutil */
+    padding: 2px 6px;
+    border-radius: 4px;
+}

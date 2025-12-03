@@ -22,7 +22,7 @@ const ASIGNATURAS: { [key: string]: string[] } = {
     'Mantenimiento', 'Control', 'Instrumentación', 'Manufactura Avanzada', 'Vibraciones Mecánicas',
     'Tópicos Avanzados de Diseño', 'Robótica', 'Controladores Lógicos Programables',
     'Innovación Tecnológica', 'Introducción a Redes de Comp.', 'Lean Manufacturing',
-    'Inteligencia Artificial', 'Manufactura Aditiva'
+    'Inteligencia Artificial', 'Manufactura Aditiva', 'Diseño de elementos mecánicos',
   ],
   'Arquitectura': [], 'Ingeniería Eléctrica': [], 'Ingeniería Electrónica': [],
   'Ingeniería Industrial': [], 'Ingeniería Logística': [], 'Ingeniería en Materiales': [],
@@ -47,7 +47,7 @@ interface PracticaData {
   hora_inicio: string;
   hora_fin: string;
   carrera: string;
-  asignatura: string;
+  asignatura: string | string[]; // puede ser string o array de strings según el backend
   grupo: string;
   no_practica: number;
   no_alumnos: number;
@@ -95,7 +95,11 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   const [horaFin, setHoraFin] = useState(getRoundedTimePlusTwo());
   
   const [carrera, setCarrera] = useState('Ingeniería Mecatrónica');
-  const [asignatura, setAsignatura] = useState('');
+  
+  // --- CORRECCIÓN 1: Estado para las opciones de asignaturas ---
+  const [asignaturaOptions, setAsignaturaOptions] = useState<Option[]>([]);
+  const [asignatura, setAsignatura] = useState<MultiValue<Option>>([]);
+  
   const [grupo, setGrupo] = useState('');
   const [noAlumnos, setNoAlumnos] = useState<number | string>(1);
 
@@ -116,6 +120,13 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   // Estado para el UUID
   const [solicitudUuidExistente, setSolicitudUuidExistente] = useState<string | null>(null);
   
+  // --- CORRECCIÓN 2: Efecto para llenar las opciones de Asignatura según la Carrera ---
+  useEffect(() => {
+    const materiasRaw = ASIGNATURAS[carrera] || [];
+    const options = materiasRaw.map(m => ({ label: m, value: m }));
+    setAsignaturaOptions(options);
+  }, [carrera]);
+
   // Carga de Inventario
   useEffect(() => {
     const fetchInventario = async () => {
@@ -149,7 +160,16 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
           setHoraInicio(data.hora_inicio);
           setHoraFin(data.hora_fin);
           setCarrera(data.carrera);
-          setAsignatura(data.asignatura);
+          // Normalizar asignatura: puede venir como string o como array de strings
+          {
+            const raw = data.asignatura;
+            const asignaturaArray: string[] = Array.isArray(raw)
+              ? raw
+              : (typeof raw === 'string' && raw.trim() !== '')
+                ? raw.split(',').map(s => s.trim()).filter(Boolean)
+                : [];
+            setAsignatura(asignaturaArray.map((e: string) => ({ label: e, value: e })));
+          }
           setGrupo(data.grupo);
           setNoAlumnos(data.no_alumnos);
           setNombrePractica(data.nombre_practica);
@@ -188,9 +208,12 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     } catch (error) { console.error(error); }
   };
 
+  // --- CORRECCIÓN 3: Limpiar asignaturas al cambiar carrera ---
   const handleCarreraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCarrera(e.target.value); setAsignatura('');
+    setCarrera(e.target.value); 
+    setAsignatura([]); // Se reinicia como array vacío
   };
+  
   const handleNext = (next: Seccion) => setSeccionAbierta(next);
   
   const handleAlumnosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,6 +242,10 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     const grupoFinal = grupo.trim() === '' ? '0A' : grupo.trim().toUpperCase();
     const materialesArray = selectedMateriales.map(option => option.value);
     const equiposArray = selectedEquipos.map(option => option.value);
+    // Convertir asignatura (MultiValue) a string o array según espera tu backend
+    // NOTA: Si tu backend espera un array de strings para asignatura, usa asignatura.map(a => a.value)
+    // Si espera un string único, toma el primero o únelos. Asumo array de strings aquí:
+    const asignaturasArray = asignatura.map(a => a.value);
 
     let finalSolicitudUuid: string | null = null;
     const promesasDePrestamo: Promise<Response>[] = [];
@@ -245,7 +272,8 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
               nombre_persona: nombreProfesor.toUpperCase().trim(),
               numero_de_control: null,
               integrantes: 1, cantidad: 1, 
-              materia: asignatura, grupo: grupoFinal,
+              materia: asignaturasArray, // Ojo aquí con lo que espera tu API
+              grupo: grupoFinal,
               solicitud_uuid: finalSolicitudUuid, 
               nombre_profesor: nombreProfesor.toUpperCase().trim()
             })
@@ -265,7 +293,9 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         body: JSON.stringify({
           nombre_profesor: nombreProfesor.toUpperCase().trim(), 
           fecha_practica: fechaPractica, hora_inicio: horaInicio, hora_fin: horaFin,
-          carrera: carrera, asignatura: asignatura, grupo: grupoFinal,
+          carrera: carrera, 
+          asignatura: asignaturasArray, // Enviamos el array de valores
+          grupo: grupoFinal,
           no_practica: noPractica, no_alumnos: Number(noAlumnos),
           nombre_practica: nombrePractica.trim(), 
           objetivo: objetivo.trim(), observaciones: observaciones.trim(),
@@ -280,7 +310,6 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       toast.success(isEditing ? '¡Modificación guardada!' : `¡Práctica #${noPractica} registrada!`);
       
       // --- ACTUALIZACIÓN CLAVE ---
-      // Si el backend nos devolvió un nuevo UUID (porque agregamos material al editar), lo guardamos.
       if (isEditing && responseData.uuid) {
         setSolicitudUuidExistente(responseData.uuid);
       }
@@ -294,7 +323,7 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         setFechaPractica(getTodayDate());
         setHoraInicio(getRoundedTime());
         setHoraFin(getRoundedTimePlusTwo());
-        setAsignatura(''); setGrupo(''); setNoAlumnos(1);
+        setAsignatura([]); setGrupo(''); setNoAlumnos(1);
         setSeccionAbierta('general');
       }
 
@@ -364,7 +393,7 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                   <input id="horaInicio" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} required disabled={isEditing} />
                 </div>
                 <div className={styles.formGroup}>
-                  <label htmlFor="horaFin">Hora Fin (Auto):</label>
+                  <label htmlFor="horaFin">Hora Fin:</label>
                   <input id="horaFin" type="time" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} required />
                 </div>
               </div>
@@ -387,7 +416,16 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                 </div>
                 <div className={styles.formGroup}>
                   <label htmlFor="asignatura">Asignatura:</label>
-                  <select id="asignatura" value={asignatura} onChange={(e) => setAsignatura(e.target.value)} required> <option value="">-- Selecciona Asignatura --</option> {(ASIGNATURAS[carrera] || []).map(asig => ( <option key={asig} value={asig}>{asig}</option> ))} </select>
+                  {/* --- CORRECCIÓN 4: Usamos asignaturaOptions en lugar de 'asignatura' para las opciones --- */}
+                  <CreatableSelect 
+                    isMulti 
+                    options={asignaturaOptions} 
+                    value={asignatura} 
+                    onChange={(newValue) => setAsignatura(newValue)} 
+                    placeholder="-- Selecciona Asignatura --" 
+                    formatCreateLabel={(inputValue) => `Crear nuevo: "${inputValue}"`} 
+                    styles={reactSelectStyles} 
+                  />
                 </div>
               </div>
               <div className={`${styles.formRow} ${styles.cols2}`}>
