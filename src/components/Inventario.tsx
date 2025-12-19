@@ -2,17 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx'; 
 import toast from 'react-hot-toast';
 import styles from './Inventario.module.css'; 
+import RealizarInventario from './RealizarInventario';
 
-// --- Interfaces ---
+// --- 1. Definición de Categorías (Nueva Estructura) ---
+const CATEGORIAS: { [key: number]: string } = {
+    // Rango 1-10: CASETA
+    1: 'Consumibles',
+    2: 'Herramientas',
+    3: 'Equipo de Seguridad',
+    
+    // Rango 11-20: LABORATORIO
+    11: 'NMLC1',
+    12: 'NMLC2',
+    13: 'NMPR',
+    14: 'NMLE',
+    15: 'ELECTROMECANICA',
+    16: 'PLC',
+    17: 'PROYECTOS',
+    18: 'AREA 1',
+    19: 'AREA 2',
+    20: 'AREA 3'
+};
+
+// --- 2. Interfaces ---
 interface Producto {
   id: number;
   nombre_equipo: string;
   descripcion: string; 
   unidades_totales: number; 
   unidades_prestadas: number; 
-  // 'visible' en DB ahora lo usamos como 'tipo' (1=Equipo, 0=Material)
+  // visible: 0 = Laboratorio, 1 = Caseta
   visible: number; 
+  categoria: number;
 }
+
 interface InventarioProps {
   apiUrl: string; 
 }
@@ -24,20 +47,30 @@ function Inventario({ apiUrl }: InventarioProps) {
   const [guardando, setGuardando] = useState(false);
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [hayCambios, setHayCambios] = useState(false);
-  const refsInputs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  const [modoInventario, setModoInventario] = useState(false);
+  
+  const refsInputs = useRef<{ [key: string]: HTMLInputElement | HTMLSelectElement | null }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importando, setImportando] = useState(false);
   const [filtro, setFiltro] = useState('');
 
-  // --- Carga Inicial ---
+  // --- 3. Carga Inicial ---
   const fetchInventario = async () => {
       setCargando(true);
       try {
         const respuesta = await fetch(`${apiUrl}/api/inventario`); 
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
         const data: Producto[] = await respuesta.json(); 
-        setProductosOriginales(data); 
-        setProductosEditados(data);   
+        
+        // Saneamiento
+        const dataSanatized = data.map(p => ({
+            ...p,
+            categoria: p.categoria || 1 
+        }));
+
+        setProductosOriginales(dataSanatized); 
+        setProductosEditados(dataSanatized);   
         setHayCambios(false);       
         setIdEditando(null);         
       } catch (error) {
@@ -51,43 +84,54 @@ function Inventario({ apiUrl }: InventarioProps) {
     fetchInventario();
   }, [apiUrl]);
 
-  // --- Funciones de Edición ---
+  // --- 4. Funciones de Edición ---
   const handleDobleClick = (id: number) => {
     setIdEditando(id);
-    setTimeout(() => { refsInputs.current[`nombre-${id}`]?.focus(); refsInputs.current[`nombre-${id}`]?.select(); }, 50);
+    setTimeout(() => { 
+        const input = refsInputs.current[`nombre-${id}`] as HTMLInputElement;
+        if(input) { input.focus(); input.select(); }
+    }, 50);
   };
   
   const handleCambioInput = (id: number, campo: keyof Producto, valor: string | number) => {
-    if (campo !== 'nombre_equipo' && campo !== 'unidades_totales') return;
-    const valorProcesado = campo === 'unidades_totales' ? (parseInt(valor as string, 10) || 0) : valor;
+    if (campo !== 'nombre_equipo' && campo !== 'unidades_totales' && campo !== 'categoria') return;
+    
+    let valorProcesado = valor;
+    if (campo === 'unidades_totales' || campo === 'categoria') {
+        valorProcesado = (parseInt(valor as string, 10) || 0);
+    }
+
     setProductosEditados(prev => prev.map(p => (p.id === id ? { ...p, [campo]: valorProcesado } : p)));
     setHayCambios(true); 
   };
 
-  const handleTeclaAbajo = (e: React.KeyboardEvent<HTMLInputElement>, id: number, campoActual: 'nombre' | 'unidades') => {
+  const handleTeclaAbajo = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, id: number, campoActual: 'nombre' | 'unidades' | 'categoria') => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (campoActual === 'nombre') { 
-          refsInputs.current[`unidades-${id}`]?.focus(); 
-          refsInputs.current[`unidades-${id}`]?.select(); 
+          (refsInputs.current[`unidades-${id}`] as HTMLInputElement)?.focus(); 
+          (refsInputs.current[`unidades-${id}`] as HTMLInputElement)?.select();
       } else if (campoActual === 'unidades') {
+          (refsInputs.current[`categoria-${id}`] as HTMLSelectElement)?.focus();
+      } else if (campoActual === 'categoria') {
         const indiceActual = productosEditados.findIndex(p => p.id === id);
         const siguienteProducto = productosEditados[indiceActual + 1];
         if (siguienteProducto) {
           setIdEditando(siguienteProducto.id); 
-           setTimeout(() => { refsInputs.current[`nombre-${siguienteProducto.id}`]?.focus(); refsInputs.current[`nombre-${siguienteProducto.id}`]?.select(); }, 50);
+           setTimeout(() => { 
+               const nextInput = refsInputs.current[`nombre-${siguienteProducto.id}`] as HTMLInputElement;
+               if(nextInput) { nextInput.focus(); nextInput.select(); }
+           }, 50);
         } else { setIdEditando(null); }
       }
     } else if (e.key === 'Escape') {
-        // Revertir cambios de esa fila específica
         setProductosEditados(prev => prev.map(p => (p.id === id ? productosOriginales.find(op => op.id === id) || p : p)));
         setIdEditando(null);
-        // Verificar si quedan otros cambios
-        setHayCambios(productosEditados.some((productoEditado, index) => JSON.stringify(productoEditado) !== JSON.stringify(productosOriginales[index]) && productoEditado.id !== id));
+        setHayCambios(productosEditados.some((pe, i) => JSON.stringify(pe) !== JSON.stringify(productosOriginales[i]) && pe.id !== id));
     }
   };
 
-  // --- Guardar Cambios (Solo Nombre y Totales) ---
+  // --- 5. Guardar Cambios ---
   const handleGuardarCambios = async () => {
     setIdEditando(null); 
     setGuardando(true);
@@ -97,12 +141,16 @@ function Inventario({ apiUrl }: InventarioProps) {
     productosEditados.forEach(productoEditado => {
         if (validationError) return; 
         const productoOriginal = productosOriginales.find(p => p.id === productoEditado.id);
-        const unidadesOriginales = productoOriginal ? Number(productoOriginal.unidades_totales) : undefined;
-        const unidadesEditadas = Number(productoEditado.unidades_totales);
+        if (!productoOriginal) return;
 
-        if (productoOriginal && (productoEditado.nombre_equipo !== productoOriginal.nombre_equipo || unidadesEditadas !== unidadesOriginales)) {
-            if (!isNaN(unidadesEditadas) && unidadesEditadas >= 0) {
-                cambios.push({ ...productoEditado, unidades_totales: unidadesEditadas });
+        const haCambiado = 
+            productoEditado.nombre_equipo !== productoOriginal.nombre_equipo || 
+            Number(productoEditado.unidades_totales) !== Number(productoOriginal.unidades_totales) ||
+            Number(productoEditado.categoria) !== Number(productoOriginal.categoria);
+
+        if (haCambiado) {
+            if (Number(productoEditado.unidades_totales) >= 0) {
+                cambios.push({ ...productoEditado });
             } else {
                 toast.error(`Cantidad inválida para '${productoEditado.nombre_equipo}'`);
                 validationError = true; 
@@ -117,7 +165,17 @@ function Inventario({ apiUrl }: InventarioProps) {
         return;
     }
 
-    const promesasUpdate = cambios.map(cambio => fetch(`${apiUrl}/api/inventario/${cambio.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre_equipo: cambio.nombre_equipo, unidades_totales: cambio.unidades_totales }), }));
+    const promesasUpdate = cambios.map(cambio => 
+        fetch(`${apiUrl}/api/inventario/${cambio.id}`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ 
+                nombre_equipo: cambio.nombre_equipo, 
+                unidades_totales: cambio.unidades_totales,
+                categoria: cambio.categoria 
+            }), 
+        })
+    );
 
     try {
         await Promise.all(promesasUpdate);
@@ -142,10 +200,10 @@ function Inventario({ apiUrl }: InventarioProps) {
         }
    };
 
-  // --- Exportar a Excel ---
+  // --- 6. Exportar a Excel ---
   const handleExportXLS = () => {
     if (productosOriginales.length === 0) { toast.error("No hay datos para exportar."); return; }
-    // Ajustamos el export para reflejar el nuevo significado de columnas
+    
     const dataToExport = productosOriginales.map(p => ({ 
         ID: p.id, 
         NombreEquipo: p.nombre_equipo, 
@@ -153,17 +211,19 @@ function Inventario({ apiUrl }: InventarioProps) {
         UnidadesTotales: p.unidades_totales, 
         UnidadesPrestadas: p.unidades_prestadas, 
         Disponibles: p.unidades_totales - p.unidades_prestadas,
-        Tipo: p.visible === 1 ? 'Equipo' : 'Material' 
+        // NUEVA LÓGICA DE TIPO
+        Tipo: p.visible === 1 ? 'Caseta' : 'Laboratorio',
+        Categoria: CATEGORIAS[p.categoria] || 'General', 
+        CategoriaID: p.categoria 
     })); 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    ws['!cols'] = [ { wch: 5 }, { wch: 30 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }]; 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-    XLSX.writeFile(wb, "inventario_actualizado.xlsx");
+    XLSX.writeFile(wb, "inventario_completo.xlsx");
     toast.success("Inventario exportado");
   }
 
-  // --- Importar CSV ---
+  // --- 7. Importar CSV ---
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) { handleImportCSV(file); }
@@ -171,7 +231,7 @@ function Inventario({ apiUrl }: InventarioProps) {
   }
 
   const handleImportCSV = (file: File) => {
-    if (!window.confirm("IMPORTANTE: Esto reemplazará TODO el inventario actual. ¿Continuar?")) return;
+    if (!window.confirm("IMPORTANTE: Esto reemplazará TODO el inventario. ¿Continuar?")) return;
     setImportando(true);
     const loadingToast = toast.loading("Importando inventario..."); 
     const reader = new FileReader();
@@ -185,7 +245,6 @@ function Inventario({ apiUrl }: InventarioProps) {
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
         if (jsonData.length < 2) throw new Error("Archivo vacío.");
         
-        // Mapeo básico de headers
         const headers = (jsonData[0] as string[]).map(h => h.trim().toLowerCase());
         const dataRows = jsonData.slice(1);
         
@@ -197,7 +256,8 @@ function Inventario({ apiUrl }: InventarioProps) {
                 if (header.includes('nombre') || header.includes('name')) key = 'nombre_equipo'; 
                 if (header.includes('desc')) key = 'descripcion'; 
                 if (header.includes('total') || header.includes('cantidad')) key = 'unidades_totales'; 
-                if (header.includes('tipo') || header.includes('visible')) key = 'visible'; // 1 o 0
+                if (header.includes('visible') || (header.includes('tipo') && !header.includes('cat'))) key = 'visible'; 
+                if (header.includes('categoria') || header.includes('cat')) key = 'categoria'; 
                 item[key] = row[index]; 
             }); 
             return item; 
@@ -216,24 +276,39 @@ function Inventario({ apiUrl }: InventarioProps) {
     reader.readAsText(file);
   }
   
-  // --- Cambiar Tipo (Equipo/Material) ---
-  // Nota: Usamos el endpoint que antes era toggle-visibility, ahora toggle-type
+  // --- 8. Toggle Tipo (0=Lab, 1=Caseta) ---
   const handleToggleTipo = async (id: number) => {
       const originalMap = new Map(productosEditados.map(p => [p.id, p.visible]));
-      // Optimistic update
+      
+      // Al cambiar tipo, cambiamos el visible
+      // NOTA: No cambiamos la categoría automáticamente en DB, 
+      // el usuario deberá editarla si queda fuera de rango.
       setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: p.visible === 1 ? 0 : 1} : p));
+      
       try {
           const response = await fetch(`${apiUrl}/api/inventario/${id}/toggle-type`, { method: 'PUT' });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.err || 'Error al cambiar tipo');
+          if (!response.ok) throw new Error('Error al cambiar tipo');
           
+          const result = await response.json();
           setProductosOriginales(prev => prev.map(p => p.id === id ? {...p, visible: result.visible} : p));
-          toast.success("Categoría actualizada");
+          toast.success("Tipo actualizado");
       } catch (error) {
-          console.error("Error al cambiar tipo:", error);
           toast.error("No se pudo cambiar el tipo");
           setProductosEditados(prev => prev.map(p => p.id === id ? {...p, visible: originalMap.get(id) ?? p.visible} : p));
       }
+  }
+
+  // --- RENDERIZADO CONDICIONAL: MODO INVENTARIO ---
+  if (modoInventario) {
+    return (
+      <RealizarInventario 
+        apiUrl={apiUrl} 
+        onVolver={() => {
+            setModoInventario(false);
+            fetchInventario(); 
+        }} 
+      />
+    );
   }
 
   if (cargando) return <p>Cargando inventario...</p>;
@@ -247,7 +322,7 @@ function Inventario({ apiUrl }: InventarioProps) {
     <div className={styles.appContainer}>
       <header>
         <h2>Gestión de Inventario</h2>
-        <p>Doble clic en celdas para editar. 'Prestadas' en rojo indica items faltantes.</p>
+        <p>Doble clic en celdas para editar (Nombre, Cantidad o Categoría).</p>
       </header>
 
       {hayCambios && (
@@ -258,7 +333,16 @@ function Inventario({ apiUrl }: InventarioProps) {
       )}
 
       <div className={styles.controls}>
-        <input type="text" placeholder="Buscar equipo..." value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+        <input type="text" placeholder="Buscar..." value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+        
+        <button 
+             onClick={() => setModoInventario(true)} 
+             className={styles.exportBtn} 
+             style={{background: '#6f42c1', color: 'white', borderColor: '#6f42c1', marginRight: 'auto', marginLeft: '10px'}}
+        >
+             📋 REALIZAR INVENTARIO
+        </button>
+
         <div className={styles.importExportActions} style={{ marginBottom: 0 }}>
           <button onClick={handleExportXLS} disabled={guardando || importando || hayCambios} className={styles.exportBtn}> Exportar Excel </button>
           <label htmlFor="csv-input" className={`${styles.importBtn} ${importando || hayCambios ? styles.disabled : ''}`}> {importando ? '...' : 'Importar CSV'} </label>
@@ -272,10 +356,10 @@ function Inventario({ apiUrl }: InventarioProps) {
             <tr>
               <th>ID</th>
               <th>Nombre Equipo</th>
-              <th>Descripción</th>
               <th style={{textAlign: 'center'}}>Total</th>
-              <th style={{textAlign: 'center'}}>En Préstamo</th>
-              <th style={{textAlign: 'center'}}>Disponibles</th>        
+              <th style={{textAlign: 'center'}}>Prestado</th>
+              <th style={{textAlign: 'center'}}>Disp.</th>        
+              <th style={{textAlign: 'center'}}>Categoría</th> 
               <th style={{textAlign: 'center'}}>Tipo</th> 
             </tr>
           </thead>
@@ -283,8 +367,15 @@ function Inventario({ apiUrl }: InventarioProps) {
             {productosFiltrados.map((producto) => {
               const disponibles = producto.unidades_totales - producto.unidades_prestadas;
               const isEditing = idEditando === producto.id;
-              // Lógica visual de alerta
               const hayPrestados = producto.unidades_prestadas > 0;
+              const isCaseta = producto.visible === 1; // 1 = Caseta, 0 = Lab
+
+              // Filtramos opciones del dropdown según el Tipo seleccionado
+              const categoriasDisponibles = Object.entries(CATEGORIAS).filter(([k, v]) => {
+                  const catId = Number(k);
+                  if (isCaseta) return catId >= 1 && catId <= 10;
+                  return catId >= 11 && catId <= 20;
+              });
               
               return (
                 <tr key={producto.id} className={isEditing ? styles.editingRow : ''}>
@@ -294,52 +385,77 @@ function Inventario({ apiUrl }: InventarioProps) {
                   <td onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
                     {isEditing ? ( 
                         <input 
-                            ref={el => { refsInputs.current[`nombre-${producto.id}`] = el; }} 
+                            ref={el => { refsInputs.current[`nombre-${producto.id}`] = el as HTMLInputElement; }} 
                             type="text" 
                             value={producto.nombre_equipo} 
                             onChange={(e) => handleCambioInput(producto.id, 'nombre_equipo', e.target.value)} 
                             onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'nombre')} 
-                            onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} 
                         /> 
                     ) : ( producto.nombre_equipo )}
                   </td>
-                  
-                  <td>{producto.descripcion}</td>
                   
                   {/* Unidades Totales */}
                   <td style={{textAlign: 'center'}} onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
                     {isEditing ? ( 
                         <input 
-                            ref={el => { refsInputs.current[`unidades-${producto.id}`] = el; }} 
+                            ref={el => { refsInputs.current[`unidades-${producto.id}`] = el as HTMLInputElement; }} 
                             type="number" min="0" 
+                            style={{width: '60px', textAlign: 'center'}}
                             value={producto.unidades_totales} 
                             onChange={(e) => handleCambioInput(producto.id, 'unidades_totales', e.target.value)} 
                             onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'unidades')} 
-                            onBlur={() => setIdEditando(prevId => prevId === producto.id ? null : prevId)} 
                         /> 
                     ) : ( producto.unidades_totales )}
                   </td>
                   
-                  {/* En Préstamo (Alerta Roja) */}
+                  {/* En Préstamo */}
                   <td style={{textAlign: 'center'}} className={hayPrestados ? styles.alertaPrestamo : ''}>
                     {producto.unidades_prestadas}
                   </td>
                   
-                  {/* Disponibles (Calculado) */}
+                  {/* Disponibles */}
                   <td style={{textAlign: 'center'}}>
                     <span className={`${styles.badgeDisponible} ${disponibles < 0 ? styles.negativo : disponibles === 0 ? styles.agotado : ''}`}>
                         {disponibles}
                     </span>
                   </td>
 
-                  {/* Tipo (Equipo/Material) */}
+                  {/* Categoría (Dropdown condicionado) */}
+                  <td style={{textAlign: 'center'}} onDoubleClick={() => !isEditing && handleDobleClick(producto.id)}>
+                    {isEditing ? (
+                        <select
+                            ref={el => { refsInputs.current[`categoria-${producto.id}`] = el as HTMLSelectElement; }} 
+                            value={producto.categoria}
+                            onChange={(e) => handleCambioInput(producto.id, 'categoria', e.target.value)}
+                            onKeyDown={(e) => handleTeclaAbajo(e, producto.id, 'categoria')}
+                            style={{ padding: '6px', borderRadius: '4px', background: '#333', color: '#fff', border: '1px solid #555', maxWidth: '150px' }}
+                        >
+                            {/* Opciones filtradas según el Tipo actual del producto */}
+                            {categoriasDisponibles.map(([k, v]) => (
+                                <option key={k} value={k}>{v}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span style={{ 
+                            fontSize: '0.85em', 
+                            padding: '4px 8px', 
+                            borderRadius: '12px', 
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                        }}>
+                            {CATEGORIAS[producto.categoria] || `Cat ${producto.categoria}`}
+                        </span>
+                    )}
+                  </td>
+
+                  {/* Tipo (0=Lab, 1=Caseta) */}
                   <td className={styles.visibilityCell}>
                     <button 
                         onClick={() => handleToggleTipo(producto.id)} 
-                        className={`${styles.tipoBadge} ${producto.visible === 1 ? styles.tipoEquipo : styles.tipoMaterial}`}
-                        title="Clic para cambiar categoría"
+                        className={`${styles.tipoBadge} ${isCaseta ? styles.tipoMaterial : styles.tipoEquipo}`} 
+                        title="Clic para cambiar Tipo"
                     >
-                        {producto.visible === 1 ? 'EQUIPO' : 'MATERIAL'}
+                        {isCaseta ? 'CASETA' : 'LABORATORIO'}
                     </button>
                   </td>
                 </tr>

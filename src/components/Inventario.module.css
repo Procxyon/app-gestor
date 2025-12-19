@@ -322,3 +322,253 @@
     padding: 2px 6px;
     border-radius: 4px;
 }
+
+
+/* --- ESTILOS PARA REALIZAR INVENTARIO (NUEVO) --- */
+
+/* Encabezado del modo inventario */
+.inventarioHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 15px;
+}
+
+.backBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ccc;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 20px;
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: #fff;
+}
+
+/* Panel de Configuración (Selectores) */
+.configPanel {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 0.85em;
+  color: #aaa;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.selectInput {
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #1e222d;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1rem;
+  min-width: 200px;
+  cursor: pointer;
+}
+.selectInput:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+/* Botón de Acción Principal (Iniciar/Terminar) */
+.actionBtn {
+  padding: 10px 24px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+  color: white;
+}
+.actionBtn:active { transform: scale(0.98); }
+
+.btnPrimary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+.btnPrimary:hover { box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4); }
+
+.btnSuccess {
+  background: linear-gradient(135deg, #28a745, #218838);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btnDanger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btnDisabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Tabla de Conteo */
+.conteoContainer {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.inputConteo {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  width: 80px;
+  text-align: center;
+  font-size: 1.1em;
+  transition: all 0.2s;
+}
+.inputConteo:focus {
+  background: #1e222d;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+.inputConteo.filled {
+  border-color: #28a745;
+  background: rgba(40, 167, 69, 0.1);
+}
+
+/* Resultados */
+.resultadosBox {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  text-align: center;
+}
+.resultadosBox h3 { margin-top: 0; color: #fff; }
+
+.diffBadge {
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.diffPos { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.diffNeg { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); }
+
+.successMessage {
+  text-align: center;
+  padding: 40px;
+  color: #4ade80;
+}
+.successMessage h2 { font-size: 2em; margin-bottom: 10px; }
+
+/* --- BARRA DE PROGRESO --- */
+.progressWrapper {
+  margin-top: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  height: 28px; /* Altura de la barra */
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #00d4ff); /* Azul por defecto */
+  border-radius: 8px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efecto de brillo animado sobre la barra */
+.progressBar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Estado completado (Verde) */
+.progressBar.completed {
+  background: linear-gradient(90deg, #28a745, #5dd879);
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+}
+
+/* Texto del porcentaje (centrado sobre la barra) */
+.progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* --- BUSCADOR INTERNO (REALIZAR INVENTARIO) --- */
+.searchBarInternal {
+  width: 100%;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25); /* Un poco más oscuro para diferenciar */
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.searchBarInternal:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.searchBarInternal::placeholder {
+  color: #888;
+}
