@@ -40,17 +40,16 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
   const [cargando, setCargando] = useState(false);
   
   // 0 = Laboratorio, 1 = Caseta
-  const [tipoSeleccionado, setTipoSeleccionado] = useState<number>(1); // Default a Caseta
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<number>(1); 
   const [catSeleccionada, setCatSeleccionada] = useState<number | ''>(''); 
   
   const [items, setItems] = useState<ItemConteo[]>([]);
   const [filtro, setFiltro] = useState('');
   
-  // Filtrar categorías para el dropdown de configuración
-  const categoriasDisponibles = Object.entries(CATEGORIAS).filter(([k, v]) => {
+  const categoriasDisponibles = Object.entries(CATEGORIAS).filter(([k]) => {
       const catId = Number(k);
-      if (tipoSeleccionado === 1) return catId >= 1 && catId <= 10; // Caseta
-      return catId >= 11 && catId <= 20; // Laboratorio
+      if (tipoSeleccionado === 1) return catId >= 1 && catId <= 10;
+      return catId >= 11 && catId <= 20;
   });
 
   // --- FASE 1: INICIAR ---
@@ -58,7 +57,6 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
     if (catSeleccionada === '') return;
     setCargando(true);
     try {
-      // Nota: Enviamos '0' si la categoría es especial "Todas", pero aquí forzamos selección
       const res = await fetch(`${apiUrl}/api/inventario/filtrar?tipo=${tipoSeleccionado}&categoria=${catSeleccionada}`);
       if (!res.ok) throw new Error('Error al obtener datos');
       const data = await res.json();
@@ -69,7 +67,8 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
         return;
       }
 
-      setItems(data.map((d: any) => ({ ...d, fisico: '' }))); 
+      // Corrección: Inicializamos con undefined en lugar de ''
+      setItems(data.map((d: any) => ({ ...d, fisico: undefined }))); 
       setFase(2);
       setFiltro(''); 
     } catch (error) {
@@ -82,15 +81,17 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
 
   // --- FASE 2: CONTEO ---
   const handleConteoChange = (id: number, valorStr: string) => {
-    const valor = valorStr === '' ? '' : parseInt(valorStr, 10);
-    if (typeof valor === 'number' && valor < 0) return; 
+    // Corrección: Convertimos string vacío a undefined para mantener tipo number
+    const valor = valorStr === '' ? undefined : parseInt(valorStr, 10);
+    if (valor !== undefined && valor < 0) return; 
 
     setItems(prev => prev.map(item => 
-      item.id === id ? { ...item, fisico: valor as number } : item
+      item.id === id ? { ...item, fisico: valor } : item
     ));
   };
 
-  const itemsContados = items.filter(i => i.fisico !== '' && i.fisico !== undefined).length;
+  // Corrección: Comparación lógica correcta para TypeScript
+  const itemsContados = items.filter(i => i.fisico !== undefined).length;
   const totalItems = items.length;
   const porcentaje = totalItems > 0 ? Math.round((itemsContados / totalItems) * 100) : 0;
   const esCompleto = porcentaje === 100;
@@ -101,7 +102,8 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
   );
 
   const validarTerminar = () => {
-    return items.every(i => i.fisico !== undefined && i.fisico !== '' && !isNaN(Number(i.fisico)));
+    // Corrección: Verificamos que no sea undefined ni NaN
+    return items.every(i => i.fisico !== undefined && !isNaN(i.fisico));
   };
 
   const handleTerminar = () => {
@@ -183,7 +185,7 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
                 value={tipoSeleccionado} 
                 onChange={e => {
                     setTipoSeleccionado(Number(e.target.value));
-                    setCatSeleccionada(''); // Resetear al cambiar de tipo
+                    setCatSeleccionada(''); 
                 }}
             >
                 <option value={1}>CASETA</option>
@@ -265,7 +267,8 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
                <tbody>
                  {itemsFiltrados.length > 0 ? (
                     itemsFiltrados.map(item => {
-                      const hasValue = item.fisico !== '' && item.fisico !== undefined;
+                      // Corrección: Verificación de valor válida para TS
+                      const hasValue = item.fisico !== undefined;
                       return (
                         <tr key={item.id} style={{borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
                           <td style={{padding: '12px'}}>{item.id}</td>
@@ -275,7 +278,8 @@ export default function RealizarInventario({ apiUrl, onVolver }: Props) {
                               type="number" 
                               min="0"
                               placeholder="0"
-                              value={item.fisico === undefined ? '' : item.fisico}
+                              // Corrección: Usamos nullish coalescing para el value
+                              value={item.fisico ?? ''}
                               onChange={(e) => handleConteoChange(item.id, e.target.value)}
                               className={`${styles.inputConteo} ${hasValue ? styles.filled : ''}`}
                             />
