@@ -1,18 +1,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import CreatableSelect from 'react-select/creatable';
+import type { MultiValue, SingleValue } from 'react-select';
 import Fuse from 'fuse.js';
 import toast from 'react-hot-toast';
 import styles from './RegistrarPrestamo.module.css';
 
+// --- DATOS ESTÁTICOS ---
+const CARRERAS = [
+  'Ingeniería Mecatrónica', 'Arquitectura', 'Ingeniería Eléctrica', 'Ingeniería Electrónica',
+  'Ingeniería Industrial', 'Ingeniería Logística', 'Ingeniería en Materiales',
+  'Ingeniería Mecánica', 'Sistemas Computacionales',
+];
+
+const ASIGNATURAS_MECATRONICA: Record<string, string[]> = {
+  '1': ['Cálculo Diferencial', 'Administración y Contabilidad', 'Química', 'Dibujo Asistido por Computadora', 'Taller de Ética', 'Fundamentos de Investigación'],
+  '2': ['Cálculo Integral', 'Programación Básica', 'Ciencia e Ingeniería de Materiales', 'Metrología y Normalización', 'Estadística y Control de Calidad'],
+  '3': ['Cálculo Vectorial', 'Álgebra Lineal', 'Procesos de Fabricación', 'Estática', 'Desarrollo Sustentable'],
+  '4': ['Ecuaciones Diferenciales', 'Métodos Numéricos', 'Mecánica de Materiales', 'Dinámica', 'Electromagnetismo'],
+  '5': ['Análisis de Fluidos', 'Electrónica Digital', 'Fundamentos de Termodinámica', 'Mecanismos', 'Análisis de Circuitos Eléctricos', 'Programación Avanzada'],
+  '6': ['Electrónica Analógica', 'Microcontroladores', 'Dinámica de Sistemas', 'Circuitos Hidráulicos y Neumáticos', 'Taller de Investigación I', 'Máquinas Eléctricas'],
+  '7': ['Electrónica de Potencia Aplicada', 'Mantenimiento', 'Diseño de Elementos Mecánicos', 'Control', 'Taller de Investigación II', 'Instrumentación'],
+  '8': ['Manufactura Avanzada', 'Vibraciones Mecánicas', 'Tópicos de Inteligencia de Negocios', 'Robótica', 'Formulación y Evaluación de Proyectos', 'Controladores Lógicos Programables', 'Tópicos Avanzados de Diseño', 'Introducción a Redes de Computadoras'],
+  '9': ['Toma de Decisiones Basada en Datos', 'Gestión Estratégica y Empresarial', 'Ingeniería de Datos', 'Liderazgo y Gestión de Proyectos', 'Análisis y Visualización de Datos', 'Desarrollo de Soluciones con Inteligencia de Negocios', 'Desarrollo de Líderes y Equipos de Alto Rendimiento', 'Habilidades de Dirección y Gestión', 'Estadística para Inteligencia de Negocios', 'Innovación Tecnológica', 'Lean Manufacturing', 'Manufactura Aditiva', 'Inteligencia Artificial'],
+};
+
+const TODAS_MECATRONICA = Object.values(ASIGNATURAS_MECATRONICA).flat();
+
 // --- Interfaces ---
+interface Option { label: string; value: string; }
 interface Producto { id: number; nombre_equipo: string; }
 interface ItemExistente { id: number; nombre_equipo: string; cantidad: number; fecha_devolucion: string | null; }
 
-// Interfaz para items en el "Carrito" (Entrada Libre)
 interface SolicitudItem { 
-  tempId: string;        // ID temporal para manejo en lista
-  nombre_ui: string;     // Lo que escribió el usuario
+  tempId: string;        
+  nombre_ui: string;     
   cantidad: string;
-  producto_real?: Producto | null; // El objeto del inventario (si se encontró)
+  producto_real?: Producto | null; 
 }
 
 interface RegistrarPrestamoProps { 
@@ -21,40 +44,58 @@ interface RegistrarPrestamoProps {
   onPrestamoSaved?: () => void;
 }
 
-type Seccion = 'solicitante' | 'tipo' | 'equipo' | '';
-type TipoSolicitud = 'PERSONAL' | 'EQUIPO';
-
 const fuseOptions = { keys: ['nombre_equipo'], threshold: 0.3, includeScore: true };
+
+const formatTitleCase = (text: string) => {
+  return text
+    .split(' ')
+    .map(word => {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+};
 
 function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: RegistrarPrestamoProps) {
   // --- Estados Generales ---
   const [todosLosProductos, setTodosLosProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
-  // Fuse para búsquedas internas
   const fuse = useMemo(() => new Fuse(todosLosProductos, fuseOptions), [todosLosProductos]);
 
   // --- Estados del Formulario ---
   const [nombrePersona, setNombrePersona] = useState('');
   const [numeroControl, setNumeroControl] = useState('');
-  const [tipo, setTipo] = useState<TipoSolicitud>('PERSONAL');
   const [integrantes, setIntegrantes] = useState('1');
-  const [materia, setMateria] = useState('');
   const [grupo, setGrupo] = useState('');
   const [nombreProfesor, setNombreProfesor] = useState('');
   
-  const [seccionAbierta, setSeccionAbierta] = useState<Seccion>('solicitante');
+  // --- Estados Académicos ---
+  const [carrera, setCarrera] = useState('Ingeniería Mecatrónica');
+  const [semestre, setSemestre] = useState('Todos');
+  const [asignaturaOptions, setAsignaturaOptions] = useState<Option[]>([]);
+  const [materia, setMateria] = useState<SingleValue<Option>>(null);
+
   const [isProfesorRequest, setIsProfesorRequest] = useState(false);
   const [editModeLocked, setEditModeLocked] = useState(false);
+
+  const [secciones, setSecciones] = useState({
+    solicitante: true,
+    tipo: true,
+    equipo: true
+  });
+
+  const toggleSeccion = (seccion: keyof typeof secciones) => {
+    if (editModeLocked && isEditing) return; 
+    setSecciones(prev => ({ ...prev, [seccion]: !prev[seccion] }));
+  };
 
   // --- Estados de Listas ---
   const [existingItems, setExistingItems] = useState<ItemExistente[]>([]);
   const [listaSolicitud, setListaSolicitud] = useState<SolicitudItem[]>([]);
   
-  // Inputs de Agregar (Texto Libre)
   const [textoMaterial, setTextoMaterial] = useState('');
   const [cantidadInput, setCantidadInput] = useState('1');
   
-  // Estado para el Modal de Ligado
   const [itemToLinkIndex, setItemToLinkIndex] = useState<number | null>(null);
   const [linkSearchTerm, setLinkSearchTerm] = useState('');
   const [linkResults, setLinkResults] = useState<Producto[]>([]);
@@ -62,7 +103,23 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
   const [enviando, setEnviando] = useState(false);
   const isEditing = !!solicitudUuid;
 
-  // 1. Carga de Inventario
+  // 1. Carga de Asignaturas
+  useEffect(() => {
+    let materiasParaMostrar: string[] = [];
+    if (carrera === 'Ingeniería Mecatrónica') {
+      if (semestre === 'Todos') {
+        materiasParaMostrar = TODAS_MECATRONICA;
+      } else {
+        materiasParaMostrar = ASIGNATURAS_MECATRONICA[semestre] || [];
+      }
+    } else {
+      materiasParaMostrar = []; 
+    }
+    const options = materiasParaMostrar.map(m => ({ label: m, value: m }));
+    setAsignaturaOptions(options);
+  }, [carrera, semestre]);
+
+  // 2. Carga de Inventario
   useEffect(() => {
     const fetchProductos = async () => {
       setLoading(true);
@@ -79,12 +136,11 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     fetchProductos();
   }, [apiUrl]);
 
-  // 2. Carga de Datos en Modo Edición
+  // 3. Carga de Datos en Modo Edición
   const cargarDatosEdicion = () => {
     if (!solicitudUuid) return;
     setLoading(true);
     setEditModeLocked(true); 
-    setSeccionAbierta('equipo'); 
 
     fetch(`${apiUrl}/api/prestamos`)
       .then(res => res.json())
@@ -98,23 +154,20 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
             
             if (header.id_persona === 'Profesor' || !header.id_persona) {
                 setIsProfesorRequest(true);
-                setTipo('PERSONAL');
             } else {
                 setIsProfesorRequest(false);
-                if (parseInt(header.integrantes) > 1 || header.materia) {
-                    setTipo('EQUIPO');
-                    setIntegrantes(String(header.integrantes));
-                    setMateria(header.materia || '');
-                    setGrupo(header.grupo || '');
-                    setNombreProfesor(header.nombre_profesor || '');
-                } else {
-                    setTipo('PERSONAL');
+                setIntegrantes(String(header.integrantes || 1));
+                setGrupo(header.grupo || '');
+                setNombreProfesor(header.nombre_profesor || '');
+                
+                if (header.materia) {
+                    setMateria({ label: header.materia, value: header.materia });
                 }
             }
 
             const itemsFormateados: ItemExistente[] = itemsSolicitud.map(p => ({
               id: p.id,
-              nombre_equipo: p.nombre_equipo, // Aquí el backend ya debe resolver el nombre con COALESCE
+              nombre_equipo: p.nombre_equipo, 
               cantidad: p.cantidad,
               fecha_devolucion: p.fecha_devolucion
             }));
@@ -132,14 +185,72 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     if (isEditing && solicitudUuid) {
       cargarDatosEdicion();
     } else {
-      setEditModeLocked(false); // Si es nuevo registro, desbloqueado
+      setEditModeLocked(false); 
     }
   }, [isEditing, solicitudUuid, apiUrl]);
 
 
+  // --- LÓGICA DE AUTO-CONTRAER AL PERDER EL FOCO (onBlur) ---
+
+  const checkSolicitanteComplete = (nombre: string, control: string, isProf: boolean) => {
+    const nombreOk = nombre.trim() !== '';
+    const controlOk = isProf || control.trim() !== '';
+    if (nombreOk && controlOk) {
+      setSecciones(s => ({ ...s, solicitante: false }));
+    }
+  };
+
+  const handleNombrePersonaBlur = () => {
+    const fmt = formatTitleCase(nombrePersona);
+    setNombrePersona(fmt);
+    checkSolicitanteComplete(fmt, numeroControl, isProfesorRequest);
+  };
+
+  const handleNumeroControlBlur = () => {
+    checkSolicitanteComplete(nombrePersona, numeroControl, isProfesorRequest);
+  };
+
+  // Se ejecuta solo al salir de "Profesor a Cargo" para cerrar la sección de forma fluida
+  const checkDetallesComplete = () => {
+    const intOk = parseInt(integrantes) > 0;
+    const carOk = carrera.trim() !== '';
+    const semOk = semestre.trim() !== '';
+    if (intOk && carOk && semOk) {
+        setSecciones(s => ({ ...s, tipo: false }));
+    }
+  };
+
+  const handleProfesorBlur = () => {
+    const fmt = formatTitleCase(nombreProfesor);
+    setNombreProfesor(fmt);
+    checkDetallesComplete(); // Cerramos la sección al terminar el último campo visual
+  };
+
+  const handleGrupoBlur = () => {
+    // Solo normalizamos, no cerramos la sección aún
+  };
+
+  const handleIntegrantesBlur = () => {
+    let val = integrantes;
+    if (!val || parseInt(val) < 1) {
+        val = '1';
+        setIntegrantes(val);
+    }
+  };
+
+  const handleCarreraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setCarrera(e.target.value); 
+    setMateria(null); 
+    setSemestre('Todos'); 
+  };
+
+  const handleSemestreChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSemestre(e.target.value);
+    setMateria(null); 
+  };
+
+
   // --- Funciones de Manejo (Entrada Libre + Validación) ---
-  
-  // Buscar coincidencia exacta
   const findExactMatch = (text: string): Producto | null => {
     if (!text) return null;
     const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -157,7 +268,7 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
       tempId: crypto.randomUUID(),
       nombre_ui: textoMaterial,
       cantidad: cantidadInput === '' ? '1' : cantidadInput,
-      producto_real: coincidencia // null si no encontró
+      producto_real: coincidencia 
     };
 
     setListaSolicitud([...listaSolicitud, newItem]);
@@ -169,7 +280,6 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     setListaSolicitud(prev => prev.filter(i => i.tempId !== tempId));
   };
 
-  // --- Lógica de Ligado (Modal) ---
   const openLinkModal = (index: number, textoActual: string) => {
     setItemToLinkIndex(index);
     setLinkSearchTerm(textoActual);
@@ -210,25 +320,25 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     }
   };
 
-  // --- ENVÍO (LÓGICA PERMISIVA - UPDATED) ---
+  // --- ENVÍO ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validaciones de Datos Personales
     if (!editModeLocked) {
         if (isProfesorRequest) {
             if (!nombrePersona) { toast.error('Falta Nombre del Profesor.'); return; }
         } else {
-            if (!nombrePersona || !numeroControl) { toast.error('Falta Nombre o N° Control.'); return; }
+            // Se quitó la obligación de materia y profesor
+            if (!nombrePersona || !numeroControl || !carrera || !semestre) { 
+                toast.error('Faltan campos obligatorios del solicitante, carrera o semestre.'); return; 
+            }
         }
     }
     
-    // 2. Validación de Lista
     if (!isEditing && listaSolicitud.length === 0) { 
         toast.error('La lista está vacía. Añade material.'); return; 
     }
 
-    // AVISO VISUAL: Si hay items no ligados, solo avisamos (no bloqueamos)
     const unlinkedCount = listaSolicitud.filter(i => !i.producto_real).length;
     if (unlinkedCount > 0) {
       toast(`${unlinkedCount} items externos (sin inventario) se guardarán manualmente.`, { 
@@ -242,7 +352,6 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     const uuidFinal = isEditing ? solicitudUuid : crypto.randomUUID();
 
     try {
-      // A. Actualizar Cabeceras
       if (!editModeLocked || !isEditing) {
          if(isEditing && uuidFinal) {
              await fetch(`${apiUrl}/api/solicitud/${uuidFinal}`, {
@@ -251,18 +360,19 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                 body: JSON.stringify({
                    nombre_persona: nombrePersona,
                    id_persona: isProfesorRequest ? 'Profesor' : numeroControl,
-                   integrantes: (isProfesorRequest || tipo === 'PERSONAL') ? 1 : parseInt(integrantes) || 1,
-                   materia: (isProfesorRequest || tipo === 'PERSONAL') ? null : materia,
-                   grupo: (isProfesorRequest || tipo === 'PERSONAL') ? null : grupo
+                   integrantes: isProfesorRequest ? 1 : parseInt(integrantes) || 1,
+                   materia: isProfesorRequest ? null : (materia?.value || null),
+                   grupo: isProfesorRequest ? null : (grupo || null),
+                   nombre_profesor: isProfesorRequest ? null : (nombreProfesor || null),
+                   carrera: carrera,
+                   semestre: semestre
                 })
              });
          }
       }
 
-      // B. Insertar Items (TODOS, vinculados y no vinculados)
       if (listaSolicitud.length > 0) {
           const solicitudes = listaSolicitud.map(item => {
-            // LÓGICA CLAVE: Si tiene producto_real, mandamos ID. Si no, mandamos nombre_extra.
             const esVinculado = !!item.producto_real?.id;
             
             return fetch(`${apiUrl}/api/prestamos`, {
@@ -270,14 +380,17 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     producto_id: esVinculado ? item.producto_real!.id : null, 
-                    nombre_extra: esVinculado ? null : item.nombre_ui, // <-- Se envía el texto libre si no hay ID
-                    
+                    nombre_extra: esVinculado ? null : item.nombre_ui, 
                     nombre_persona: nombrePersona,
                     numero_de_control: isProfesorRequest ? null : numeroControl, 
-                    integrantes: 1, 
+                    integrantes: isProfesorRequest ? 1 : parseInt(integrantes) || 1, 
                     cantidad: parseInt(item.cantidad) || 1,
-                    materia: null, grupo: null, nombre_profesor: null,
-                    solicitud_uuid: uuidFinal
+                    materia: isProfesorRequest ? null : (materia?.value || null), 
+                    grupo: isProfesorRequest ? null : (grupo || null), 
+                    nombre_profesor: isProfesorRequest ? null : (nombreProfesor || null),
+                    solicitud_uuid: uuidFinal,
+                    carrera: carrera,
+                    semestre: semestre
                 }),
             });
           });
@@ -286,15 +399,16 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
           if (responses.some(res => !res.ok)) throw new Error('Error al registrar algunos items');
       }
 
-      // C. Éxito
       toast.success(isEditing ? "Solicitud actualizada" : "¡Préstamo registrado!", { id: loadingToast });
       
       if (isEditing && onPrestamoSaved) {
           setTimeout(onPrestamoSaved, 800); 
       } else {
           setListaSolicitud([]); setNombrePersona(''); setNumeroControl(''); 
-          setLinkSearchTerm(''); setTipo('PERSONAL'); setSeccionAbierta('solicitante');
-          setTextoMaterial(''); setCantidadInput('1');
+          setLinkSearchTerm(''); setNombreProfesor(''); setGrupo('');
+          setTextoMaterial(''); setCantidadInput('1'); setMateria(null);
+          setSecciones({ solicitante: true, tipo: true, equipo: true });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
     } catch (error) {
@@ -303,6 +417,38 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
     } finally {
       setEnviando(false);
     }
+  };
+
+  // --- ESTILOS REACT SELECT ---
+  const reactSelectStyles = {
+    control: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderColor: state.isFocused ? 'rgba(0, 170, 255, 0.18)' : 'rgba(255, 255, 255, 0.16)',
+      boxShadow: state.isFocused ? '0 6px 20px rgba(0, 170, 255, 0.06)' : 'none',
+      color: '#eee',
+      padding: '2px 6px',
+      borderRadius: '8px',
+      minHeight: '48px', 
+      fontSize: '16px', 
+      '&:hover': { borderColor: 'rgba(0, 170, 255, 0.18)' },
+    }),
+    menu: (base: any) => ({
+      ...base, backgroundColor: '#1e222d',
+      border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.14))',
+      color: '#eee', borderRadius: '8px', overflow: 'hidden',
+      zIndex: 9999, 
+    }),
+    option: (base: any, state: any) => ({
+      ...base, 
+      backgroundColor: state.isFocused ? 'rgba(0, 123, 255, 0.2)' : 'transparent', 
+      color: '#eee',
+      padding: '12px', 
+      fontSize: '16px',
+    }),
+    singleValue: (base: any) => ({ ...base, color: '#eee', fontSize: '16px' }),
+    input: (base: any) => ({ ...base, color: '#eee', fontSize: '16px' }),
+    placeholder: (base: any) => ({ ...base, color: '#888', fontSize: '16px' }),
   };
 
   // --- RENDER ---
@@ -322,7 +468,10 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                             if(e.target.checked) toast('Edición habilitada', {icon:'🔓'});
                         } else {
                             setIsProfesorRequest(e.target.checked);
-                            if(e.target.checked) { setTipo('PERSONAL'); setNumeroControl(''); }
+                            if(e.target.checked) { 
+                                setNumeroControl(''); 
+                                checkSolicitanteComplete(nombrePersona, '', true);
+                            }
                         }
                     }} 
                 />
@@ -338,7 +487,6 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
       {!loading && (
         <form onSubmit={handleSubmit} className={styles.formularioPrestamo}>
             
-            {/* --- ZONA DE ITEMS EXISTENTES (SOLO EDICIÓN) --- */}
             {isEditing && (
                 <div className={styles.userInfoBlock}>
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
@@ -369,95 +517,114 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                 </div>
             )}
 
-            {/* --- SECCIÓN 1: DATOS (Bloqueable) --- */}
+            {/* --- SECCIÓN 1: DATOS --- */}
             <div className={`${styles.accordionItem} ${editModeLocked && isEditing ? styles.locked : ''}`}>
-                <div className={styles.accordionHeader} onClick={() => !editModeLocked && setSeccionAbierta('solicitante')}>
+                <div className={styles.accordionHeader} onClick={() => toggleSeccion('solicitante')}>
                     <span>1. Datos del Solicitante</span>
-                    <span>{seccionAbierta === 'solicitante' ? '▲' : '▼'}</span>
+                    <span>{secciones.solicitante ? '▲' : '▼'}</span>
                 </div>
                 
-                {seccionAbierta === 'solicitante' && (
+                {secciones.solicitante && (
                 <div className={styles.accordionContent}>
                     <fieldset>
                         <div className={styles.formGroup}>
                             <label>Nombre Completo:</label>
-                            <input type="text" value={nombrePersona} onChange={(e) => setNombrePersona(e.target.value)} required disabled={editModeLocked && isEditing} />
+                            <input type="text" value={nombrePersona} placeholder='Ingrese su nombre completo' onChange={(e) => setNombrePersona(e.target.value)} onBlur={handleNombrePersonaBlur} required disabled={editModeLocked && isEditing} />
                         </div>
                         
                         {!isProfesorRequest && (
                             <div className={styles.formGroup}>
                                 <label>Número de Control:</label>
-                                <input type="text" inputMode="numeric" value={numeroControl} onChange={(e) => {if (/^\d*$/.test(e.target.value)) setNumeroControl(e.target.value)}} disabled={editModeLocked && isEditing} />
+                                <input type="text" inputMode="numeric" value={numeroControl} placeholder='Ingrese su numero de control' onChange={(e) => {if (/^\d*$/.test(e.target.value)) setNumeroControl(e.target.value)}} onBlur={handleNumeroControlBlur} disabled={editModeLocked && isEditing} />
                             </div>
-                        )}
-                        {!isEditing && (
-                            <button type="button" className={styles.nextBtn} onClick={() => setSeccionAbierta(isProfesorRequest ? 'equipo' : 'tipo')}>Siguiente ▼</button>
                         )}
                     </fieldset>
                 </div>
                 )}
             </div>
 
-            {/* --- SECCIÓN 2: DETALLES (Bloqueable) --- */}
+            {/* --- SECCIÓN 2: DETALLES --- */}
             <div className={`${styles.accordionItem} ${(isProfesorRequest || (editModeLocked && isEditing)) ? styles.disabled : ''} ${editModeLocked && isEditing ? styles.locked : ''}`}>
-                <div className={styles.accordionHeader} onClick={() => !isProfesorRequest && !editModeLocked && setSeccionAbierta('tipo')}>
+                <div className={styles.accordionHeader} onClick={() => !isProfesorRequest && !editModeLocked && toggleSeccion('tipo')}>
                     <span>2. Detalles Académicos</span>
-                    <span>{seccionAbierta === 'tipo' ? '▲' : '▼'}</span>
+                    <span>{secciones.tipo ? '▲' : '▼'}</span>
                 </div>
 
-                {seccionAbierta === 'tipo' && !isProfesorRequest && (
+                {secciones.tipo && !isProfesorRequest && (
                 <div className={styles.accordionContent}>
                     <fieldset>
-                        <div className={styles.tipoSolicitudSelector}>
-                            <label className={tipo === 'PERSONAL' ? styles.active : ''}>
-                                <input type="radio" name="tipo" value="PERSONAL" checked={tipo === 'PERSONAL'} onChange={() => setTipo('PERSONAL')} disabled={editModeLocked && isEditing} />
-                                👤 Personal
-                            </label>
-                            <label className={tipo === 'EQUIPO' ? styles.active : ''}>
-                                <input type="radio" name="tipo" value="EQUIPO" checked={tipo === 'EQUIPO'} onChange={() => setTipo('EQUIPO')} disabled={editModeLocked && isEditing} />
-                                👥 Equipo
-                            </label>
+                        {/* --- FILA 1: Carrera (Largo) y Semestre (Corto) --- */}
+                        <div className={styles.formRow2}>
+                            <div className={`${styles.formGroup} ${styles.colLarge}`}>
+                                <label htmlFor="carrera">Carrera:</label>
+                                <select id="carrera" value={carrera} onChange={handleCarreraChange} disabled={editModeLocked && isEditing}> 
+                                    {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)} 
+                                </select>
+                            </div>
+                            <div className={`${styles.formGroup} ${styles.colSmall}`}>
+                                <label htmlFor="semestre">Semestre:</label>
+                                <select id="semestre" value={semestre} onChange={handleSemestreChange} disabled={(editModeLocked && isEditing) || carrera !== 'Ingeniería Mecatrónica'}>
+                                    <option value="Todos">Todas</option>
+                                    <option value="1">1°</option>
+                                    <option value="2">2°</option>
+                                    <option value="3">3°</option>
+                                    <option value="4">4°</option>
+                                    <option value="5">5°</option>
+                                    <option value="6">6°</option>
+                                    <option value="7">7°</option>
+                                    <option value="8">8°</option>
+                                    <option value="9">9°</option>
+                                </select>
+                            </div>
                         </div>
-                        
-                        <div className={`${styles.camposEquipo} ${tipo === 'EQUIPO' ? styles.visible : ''}`}>
-                            <div className={styles.formGroup}>
+
+                        {/* --- FILA 2: Materia (Largo) y Grupo (Corto) --- */}
+                        <div className={styles.formRow2}>
+                            <div className={`${styles.formGroup} ${styles.colLarge}`}>
+                                <label>Materia:</label>
+                                <CreatableSelect 
+                                    options={asignaturaOptions} 
+                                    value={materia} 
+                                    onChange={(newValue) => setMateria(newValue)} 
+                                    placeholder="Materia relacionada al semestre" 
+                                    formatCreateLabel={(inputValue) => `Crear: "${inputValue}"`} 
+                                    styles={reactSelectStyles} 
+                                    isDisabled={editModeLocked && isEditing}
+                                />
+                            </div>
+                            <div className={`${styles.formGroup} ${styles.colSmall}`}>
+                                <label>Grupo:</label>
+                                <input type="text" value={grupo} onChange={(e) => setGrupo(e.target.value.toUpperCase())} onBlur={handleGrupoBlur} placeholder="Ej. 0A" style={{ textTransform: 'uppercase' }} disabled={editModeLocked && isEditing} />
+                            </div>
+                        </div>
+
+                        {/* --- FILA 3: Integrantes (Corto) y Profesor (Largo) --- */}
+                        <div className={styles.formRow2}>
+                            <div className={`${styles.formGroup} ${styles.colSmall}`}>
+                                <label>Int.:</label>
+                                <input type="number" value={integrantes} min="1" onChange={(e) => setIntegrantes(e.target.value)} onBlur={handleIntegrantesBlur} disabled={editModeLocked && isEditing} />
+                            </div>
+                            <div className={`${styles.formGroup} ${styles.colLarge}`}>
                                 <label>Profesor a Cargo:</label>
-                                <input type="text" value={nombreProfesor} onChange={(e) => setNombreProfesor(e.target.value)} disabled={editModeLocked && isEditing} />
-                            </div>
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Integrantes:</label>
-                                    <input type="number" value={integrantes} min="1" onChange={(e) => setIntegrantes(e.target.value)} disabled={editModeLocked && isEditing} />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Materia:</label>
-                                    <input type="text" value={materia} onChange={(e) => setMateria(e.target.value)} disabled={editModeLocked && isEditing} />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Grupo:</label>
-                                    <input type="text" value={grupo} onChange={(e) => setGrupo(e.target.value)} disabled={editModeLocked && isEditing} />
-                                </div>
+                                <input type="text" value={nombreProfesor} placeholder='Ingrese el nombre completo' onChange={(e) => setNombreProfesor(e.target.value)} onBlur={handleProfesorBlur} disabled={editModeLocked && isEditing} />
                             </div>
                         </div>
-                        {!isEditing && (
-                            <button type="button" className={styles.nextBtn} onClick={() => setSeccionAbierta('equipo')}>Siguiente ▼</button>
-                        )}
                     </fieldset>
                 </div>
                 )}
             </div>
             
-            {/* --- SECCIÓN 3: AÑADIR ITEMS (ENTRADA LIBRE + LIGADO) --- */}
+            {/* --- SECCIÓN 3: MATERIALES --- */}
             <div className={styles.accordionItem}>
-                <div className={styles.accordionHeader} onClick={() => setSeccionAbierta('equipo')}>
-                    <span>3. {isEditing ? 'Añadir MÁS Items' : 'Seleccionar Items'}</span>
-                    <span>{seccionAbierta === 'equipo' ? '▲' : '▼'}</span>
+                <div className={styles.accordionHeader} onClick={() => toggleSeccion('equipo')}>
+                    <span>3. {isEditing ? 'Añadir MÁS Materiales' : 'Materiales'}</span>
+                    <span>{secciones.equipo ? '▲' : '▼'}</span>
                 </div>
 
-                {seccionAbierta === 'equipo' && (
+                {secciones.equipo && (
                 <div className={styles.accordionContent}>
                     <fieldset>
-                        <label>Agregar Material:</label>
+                        <label>Buscar / Agregar Material:</label>
                         <div className={styles.addItemRow}>
                             <input 
                                 type="text" 
@@ -492,7 +659,6 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
                                                 <span className={styles.statusOk} title="OK: Encontrado en inventario">✅</span>
                                             ) : (
                                                 <div className={styles.statusWarning} title="No coincide con inventario. (Se guardará como texto libre)">
-                                                    {/* Botón opcional si quieren ligar, pero ya no es forzoso */}
                                                     <button type="button" onClick={() => openLinkModal(index, item.nombre_ui)}>⚠️</button>
                                                 </div>
                                             )}
@@ -527,7 +693,6 @@ function RegistrarPrestamo({ apiUrl, solicitudUuid, onPrestamoSaved }: Registrar
         </form>
       )}
 
-      {/* --- MODAL FLOTANTE PARA LIGAR --- */}
       {itemToLinkIndex !== null && (
         <div className={styles.linkModalOverlay} onClick={() => setItemToLinkIndex(null)}>
             <div className={styles.linkModal} onClick={e => e.stopPropagation()}>

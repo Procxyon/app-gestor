@@ -1,134 +1,155 @@
-/* --- HistorialPracticas.module.css (COMPLETO) --- */
+/* --- HistorialPracticas.module.css (TEMA GLASS + SUBMENÚ) --- */
 
-/* Contenedor "Glass" principal */
 .appContainer {
   width: 100%;
-  max-width: 1400px; /* Aumentado un poco para dar aire en pantallas grandes */
+  max-width: 1400px;
   margin: 0 auto;
-  
   background: var(--glass-bg, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
   border-radius: 12px;
-  
   padding: 25px 40px;
   box-sizing: border-box;
   color: #eee;
+  transform: translateZ(0);
+  will-change: transform, backdrop-filter;
 }
 
-/* Cabecera */
-.appContainer header {
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-.appContainer header h2 {
-  margin: 0 0 25px 0;
-  color: #fff;
-  font-weight: 300;
-  font-size: 1.8em;
-}
+.appContainer header { border: none; padding: 0; margin: 0; }
+.appContainer header h2 { margin: 0 0 25px 0; color: #fff; font-weight: 300; font-size: 1.8em; }
 
-/* --- CONTROLES (Barra superior) --- */
+/* --- CONTROLES --- */
 .controls {
   display: flex;
   gap: 15px;
   align-items: center;
   margin-bottom: 20px;
-  justify-content: space-between; /* Extiende elementos a los extremos */
+  justify-content: space-between;
   width: 100%;
 }
-
-/* Input del Filtro */
 .controls input[type="text"] {
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #f0f0f0; 
-  color: #333;       
-  font-size: 1rem;
-  min-width: 350px; /* Ancho base */
-  flex-grow: 1;     /* Permite crecer si hay espacio */
-  max-width: 500px; /* Pero no demasiado */
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eee;       
+  font-size: 16px;
+  min-width: 250px; 
+  flex-grow: 1;     
+  max-width: 500px; 
+  transition: all 0.3s ease;
 }
-.controls input[type="text"]::placeholder {
-  color: #666;
-  opacity: 1;
-}
+.controls input[type="text"]::placeholder { color: #888; }
 .controls input[type="text"]:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
+  border-color: rgba(0, 170, 255, 0.18);
 }
 
-/* Grupo de Botones */
-.buttonGroup {
-  display: flex;
-  gap: 15px;
+/* --- NUEVO: SUBMENÚ DE GESTIÓN DE DATOS --- */
+.headerMenuContainer {
+  position: relative;
+  display: inline-block;
 }
 
-.exportBtn {
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #ccc;
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.9em;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.exportBtn:hover { background-color: #e0e0e0; }
-
-.deleteAllBtn {
-  background-color: #dc3545;
+.headerMenuBtn {
+  background-color: rgba(0, 170, 255, 0.8);
   color: white;
-  border: 1px solid #dc3545;
-  padding: 12px 15px;
+  border: 1px solid rgba(0, 170, 255, 0.5);
+  padding: 12px 20px;
   border-radius: 8px;
   font-weight: bold;
   font-size: 0.9em;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.deleteAllBtn:hover { background-color: #c82333; }
+.headerMenuBtn:hover {
+  background-color: #00aaff;
+  box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
+}
+
+.headerDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background: #1e222d;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 5px;
+  z-index: 100;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.headerDropdown button {
+  background: transparent;
+  border: none;
+  color: #eee;
+  padding: 12px 15px;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.headerDropdown button:hover {
+  background: rgba(0, 170, 255, 0.2);
+  color: #00aaff;
+}
+
+.headerDropdown .deleteOption {
+  color: #ff5555;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 5px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.headerDropdown .deleteOption:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff5555;
+}
 
 
-/* --- TABLA (SOLUCIÓN DE ALINEACIÓN Y ANCHO) --- */
+/* --- TABLA OPTIMIZADA --- */
 .tableContainer {
   width: 100%;
   overflow-x: auto;
-  
-  /* Altura mínima y padding para que el menú tenga espacio */
   min-height: 450px; 
-  padding-bottom: 150px; 
+  padding-bottom: 20px; 
 }
 
 .tableContainer table {
-  /* ESTO ES CRÍTICO: Fuerza a la tabla a ocupar todo el ancho disponible */
   width: 100%; 
-  
-  /* Mínimo para asegurar scroll en móviles y no aplastar contenido */
-  min-width: 1000px; 
-  
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  table-layout: auto; 
 }
 
-/* Estilos de Celdas (Centrado) */
 .tableContainer th,
 .tableContainer td {
-  padding: 14px 15px;
-  
-  /* CENTRADO PERFECTO */
+  padding: 14px 10px;
   text-align: center;
   vertical-align: middle;
-  
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  white-space: nowrap;
+  word-wrap: break-word;
   font-size: 0.95em;
 }
 
@@ -138,152 +159,113 @@
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.5px;
+  color: #ccc;
+  white-space: nowrap; 
 }
 
-/* Bordes redondeados en cabecera */
 .tableContainer th:first-child { border-top-left-radius: 8px; }
 .tableContainer th:last-child { border-top-right-radius: 8px; }
-
 .tableContainer tr:last-child td { border-bottom: none; }
+.tableContainer tr:hover { background-color: rgba(0, 170, 255, 0.08); }
 
-.tableContainer tr:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-/* Listas desplegables (Details) */
+/* --- NUEVA LISTA COMBINADA (ÁREA / MATERIAL) --- */
 .tableContainer details summary {
   cursor: pointer;
   list-style: none;
-  display: inline-block; /* Ayuda al centrado */
+  display: inline-block;
+  font-weight: 600;
+  color: #00aaff;
+  white-space: nowrap; 
 }
 .tableContainer details summary::-webkit-details-marker { display: none; }
-.tableContainer details summary::before {
-  content: '► ';
-  font-size: 0.8em;
-  margin-right: 5px;
-  color: var(--accent, #00aaff);
-}
-.tableContainer details[open] summary::before {
-  content: '▼ ';
-}
-/* Al abrir la lista, el texto interno se alinea a la izquierda para leer mejor */
-.tableContainer ul {
+.tableContainer details summary::before { content: '► '; font-size: 0.8em; margin-right: 5px; }
+.tableContainer details[open] summary::before { content: '▼ '; }
+
+.combinedLists {
   text-align: left;
-  margin: 5px 0 0 0;
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.listSection { margin-bottom: 10px; }
+.listSection:last-child { margin-bottom: 0; }
+.listTitle {
+  font-weight: bold;
+  color: #fff;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 2px;
+}
+.combinedLists ul {
+  margin: 0;
   padding-left: 20px;
   font-size: 0.9em;
   color: #ccc;
 }
 
-
 /* --- MENÚ DE ACCIONES (Hamburguesa) --- */
-.actionsCell {
-  position: relative;
-  /* El text-align center ya viene heredado de td, pero aseguramos */
-  text-align: center; 
-}
-
+.actionsCell { position: relative; text-align: center; white-space: nowrap; }
 .menuToggle {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #eee;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #eee; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;
 }
 .menuToggle:hover { background: rgba(255, 255, 255, 0.2); }
 
-.actionsMenu {
-  position: relative;
-  display: inline-block;
-}
-.actionsMenu summary { list-style: none; }
+.actionsMenu { position: relative; display: inline-block; }
+.actionsMenu summary { list-style: none; color: #fff; }
 .actionsMenu summary::-webkit-details-marker { display: none; }
+.actionsMenu summary::before { display: none !important; }
 
-/* Menú Desplegable (Base) */
 .menuDropdown {
-  position: absolute;
-  right: 0; /* Se alinea a la derecha del botón */
-  top: 100%; /* Se abre hacia abajo */
-  margin-top: 5px;
-  background: #1e222d;
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
-  border-radius: 8px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  padding: 5px;
-  z-index: 50;
-  width: 170px;
-  text-align: left; /* El texto dentro del menú SÍ va a la izquierda */
+  position: absolute; right: 0; top: 100%; margin-top: 5px;
+  background: #1e222d; border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: 8px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  padding: 5px; z-index: 50; width: 170px; text-align: left; 
 }
-
-/* LÓGICA DE APERTURA INTELIGENTE */
-
-/* 1. Si es de las últimas 3 filas -> ABRE HACIA ARRIBA */
 .tableContainer tr:nth-last-child(-n+3) .menuDropdown {
-  top: auto;
-  bottom: 100%;
-  margin-top: 0;
-  margin-bottom: 5px;
-  box-shadow: 0 -8px 32px 0 rgba(0, 0, 0, 0.5);
+  top: auto; bottom: 100%; margin-top: 0; margin-bottom: 5px; box-shadow: 0 -8px 32px 0 rgba(0, 0, 0, 0.6);
 }
-
-/* 2. REGLA DE PRIORIDAD: Si es la fila 1 o 2 -> FUERZA HACIA ABAJO
-   (Esto arregla el bug cuando hay solo 1 registro) */
 .tableContainer tr:nth-child(-n+2) .menuDropdown {
-  top: 100% !important;
-  bottom: auto !important;
-  margin-top: 5px !important;
-  margin-bottom: 0 !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+  top: 100% !important; bottom: auto !important; margin-top: 5px !important; margin-bottom: 0 !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Botones del menú */
 .menuButton {
-  display: block;
-  width: 100%;
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  color: #eee;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 6px;
-  font-size: 0.9em;
+  display: block; width: 100%; padding: 10px 12px; background: none; border: none; color: #eee;
+  text-align: left; cursor: pointer; border-radius: 6px; font-size: 0.9em; transition: 0.2s;
 }
-.menuButton:hover {
-  background-color: #007bff;
-  color: white;
-}
-.menuButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.menuButton.delete { color: #ffaaaa; }
-.menuButton.delete:hover {
-  background-color: #dc3545;
-  color: white;
-}
+.menuButton:hover { background-color: rgba(0, 170, 255, 0.2); color: #00aaff; }
+.menuButton:disabled { opacity: 0.5; cursor: not-allowed; }
+.menuButton.delete { color: #ff5555; }
+.menuButton.delete:hover { background-color: rgba(220, 53, 69, 0.2); color: #ff5555; }
 
-/* Responsive */
+/* --- PAGINACIÓN --- */
+.pagination {
+  display: flex; justify-content: center; align-items: center; gap: 20px;
+  margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.pageBtn {
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+}
+.pageBtn:hover:not(:disabled) { background: rgba(0, 170, 255, 0.2); border-color: rgba(0, 170, 255, 0.5); color: #00aaff; }
+.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageInfo { font-weight: 600; color: #ccc; font-size: 1rem; }
+
+/* --- RESPONSIVE --- */
 @media (max-width: 768px) {
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .controls input[type="text"] {
-    min-width: 100%;
-    max-width: 100%;
-  }
-  .buttonGroup {
-    justify-content: space-between;
-  }
-  .tableContainer table {
-    min-width: 800px;
-  }
-  .tableContainer th,
-  .tableContainer td {
-    padding: 10px 8px;
-    font-size: 0.85em;
-  }
+  .appContainer { padding: 15px; }
+  .controls { flex-direction: column; align-items: stretch; }
+  .controls input[type="text"] { min-width: 100%; max-width: 100%; }
+  
+  .headerMenuContainer { width: 100%; }
+  .headerMenuBtn { width: 100%; justify-content: center; }
+  .headerDropdown { width: 100%; }
+
+  .tableContainer table { min-width: 650px; } 
+  .tableContainer th, .tableContainer td { padding: 10px 6px; font-size: 0.85em; }
 }

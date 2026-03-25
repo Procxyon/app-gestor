@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import CreatableSelect from 'react-select/creatable';
-import type { MultiValue } from 'react-select';
+import type { MultiValue, SingleValue } from 'react-select';
 import toast from 'react-hot-toast';
 import styles from './RegistrarPractica.module.css';
 
@@ -11,28 +11,32 @@ const CARRERAS = [
   'Ingeniería Mecánica', 'Sistemas Computacionales',
 ];
 
-const ASIGNATURAS: { [key: string]: string[] } = {
-  'Ingeniería Mecatrónica': [
-    'Química', 'Dibujo Asistido Computadora', 'Programación Básica', 'Ciencia e Ing Materiales',
-    'Metrología y Normalización', 'Estado y Control de Calidad', 'Fundamentos de investigación',
-    'Procesos de Fabricación', 'Mecánica de Materiales', 'Dinámica', 'Electromagnetismo',
-    'Análisis de Fluidos', 'Electrónica Digital', 'Mecanismos', 'Analisis de Circuitos',
-    'Programación Avanzada', 'Electrónica Analógica', 'Microcontroladores', 'Dinámica de Sistemas',
-    'Circuitos Hidraulicos y Neumáticos', 'Máquinas Eléctricas', 'Electrónica Potencia Aplicada',
-    'Mantenimiento', 'Control', 'Instrumentación', 'Manufactura Avanzada', 'Vibraciones Mecánicas',
-    'Tópicos Avanzados de Diseño', 'Robótica', 'Controladores Lógicos Programables',
-    'Innovación Tecnológica', 'Introducción a Redes de Comp.', 'Lean Manufacturing',
-    'Inteligencia Artificial', 'Manufactura Aditiva', 'Diseño de elementos mecánicos',
-  ],
-  'Arquitectura': [], 'Ingeniería Eléctrica': [], 'Ingeniería Electrónica': [],
-  'Ingeniería Industrial': [], 'Ingeniería Logística': [], 'Ingeniería en Materiales': [],
-  'Ingeniería Mecánica': [], 'Sistemas Computacionales': [],
+const AREAS_USO = [
+  'NMPR - Laboratorio de Prototipos',
+  'NMCL1 - Computo 1',
+  'NMCL 2 - Computo 2',
+  'NMLE - Laboratorio Electrónica',
+  'PLC - Laboratorio PLC',
+  'EP - Electroneumática',
+  'Aula de Investigación'
+];
+
+const ASIGNATURAS_MECATRONICA: Record<string, string[]> = {
+  '1': ['Cálculo Diferencial', 'Administración y Contabilidad', 'Química', 'Dibujo Asistido por Computadora', 'Taller de Ética', 'Fundamentos de Investigación'],
+  '2': ['Cálculo Integral', 'Programación Básica', 'Ciencia e Ingeniería de Materiales', 'Metrología y Normalización', 'Estadística y Control de Calidad'],
+  '3': ['Cálculo Vectorial', 'Álgebra Lineal', 'Procesos de Fabricación', 'Estática', 'Desarrollo Sustentable'],
+  '4': ['Ecuaciones Diferenciales', 'Métodos Numéricos', 'Mecánica de Materiales', 'Dinámica', 'Electromagnetismo'],
+  '5': ['Análisis de Fluidos', 'Electrónica Digital', 'Fundamentos de Termodinámica', 'Mecanismos', 'Análisis de Circuitos Eléctricos', 'Programación Avanzada'],
+  '6': ['Electrónica Analógica', 'Microcontroladores', 'Dinámica de Sistemas', 'Circuitos Hidráulicos y Neumáticos', 'Taller de Investigación I', 'Máquinas Eléctricas'],
+  '7': ['Electrónica de Potencia Aplicada', 'Mantenimiento', 'Diseño de Elementos Mecánicos', 'Control', 'Taller de Investigación II', 'Instrumentación'],
+  '8': ['Manufactura Avanzada', 'Vibraciones Mecánicas', 'Tópicos de Inteligencia de Negocios', 'Robótica', 'Formulación y Evaluación de Proyectos', 'Controladores Lógicos Programables', 'Tópicos Avanzados de Diseño', 'Introducción a Redes de Computadoras'],
+  '9': ['Toma de Decisiones Basada en Datos', 'Gestión Estratégica y Empresarial', 'Ingeniería de Datos', 'Liderazgo y Gestión de Proyectos', 'Análisis y Visualización de Datos', 'Desarrollo de Soluciones con Inteligencia de Negocios', 'Desarrollo de Líderes y Equipos de Alto Rendimiento', 'Habilidades de Dirección y Gestión', 'Estadística para Inteligencia de Negocios', 'Innovación Tecnológica', 'Lean Manufacturing', 'Manufactura Aditiva', 'Inteligencia Artificial'],
 };
 
-// --- INTERFACES ---
+const TODAS_MECATRONICA = Object.values(ASIGNATURAS_MECATRONICA).flat();
+
 interface Option { label: string; value: string; }
 interface Producto { id: number; nombre_equipo: string; }
-type Seccion = 'general' | 'academico' | 'detalles' | '';
 
 interface RegistrarPracticaProps { 
   apiUrl: string;
@@ -47,7 +51,7 @@ interface PracticaData {
   hora_inicio: string;
   hora_fin: string;
   carrera: string;
-  asignatura: string | string[]; // puede ser string o array de strings según el backend
+  asignatura: string | string[]; 
   grupo: string;
   no_practica: number;
   no_alumnos: number;
@@ -59,7 +63,6 @@ interface PracticaData {
   solicitud_uuid: string | null; 
 }
 
-// --- Funciones Helper ---
 const getTodayDate = () => {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -82,12 +85,20 @@ const getRoundedTimePlusTwo = () => {
   return `${String((hours + 2) % 24).padStart(2, '0')}:00`;
 };
 
-// --- COMPONENTE PRINCIPAL ---
+const formatTitleCase = (text: string) => {
+  return text
+    .split(' ')
+    .map(word => {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+};
+
 function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPracticaProps) {
   
   const isEditing = practicaId !== null;
 
-  // Estados del Formulario
   const [nombreProfesor, setNombreProfesor] = useState('');
   const [noPractica, setNoPractica] = useState(1);
   const [fechaPractica, setFechaPractica] = useState(getTodayDate());
@@ -95,11 +106,9 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   const [horaFin, setHoraFin] = useState(getRoundedTimePlusTwo());
   
   const [carrera, setCarrera] = useState('Ingeniería Mecatrónica');
-  
-  // --- CORRECCIÓN 1: Estado para las opciones de asignaturas ---
+  const [semestre, setSemestre] = useState('Todos');
   const [asignaturaOptions, setAsignaturaOptions] = useState<Option[]>([]);
-  const [asignatura, setAsignatura] = useState<MultiValue<Option>>([]);
-  
+  const [asignatura, setAsignatura] = useState<SingleValue<Option>>(null);
   const [grupo, setGrupo] = useState('');
   const [noAlumnos, setNoAlumnos] = useState<number | string>(1);
 
@@ -107,27 +116,40 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
   const [objetivo, setObjetivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
   
-  const [equipoOptions, setEquipoOptions] = useState<Option[]>([]);
+  const [equipoRequerido, setEquipoRequerido] = useState(''); 
+  
   const [materialOptions, setMaterialOptions] = useState<Option[]>([]);
-  const [selectedEquipos, setSelectedEquipos] = useState<MultiValue<Option>>([]);
   const [selectedMateriales, setSelectedMateriales] = useState<MultiValue<Option>>([]);
   
   const [productosApi, setProductosApi] = useState<Producto[]>([]);
-
   const [loading, setLoading] = useState(false);
-  const [seccionAbierta, setSeccionAbierta] = useState<Seccion>('general');
-
-  // Estado para el UUID
   const [solicitudUuidExistente, setSolicitudUuidExistente] = useState<string | null>(null);
-  
-  // --- CORRECCIÓN 2: Efecto para llenar las opciones de Asignatura según la Carrera ---
-  useEffect(() => {
-    const materiasRaw = ASIGNATURAS[carrera] || [];
-    const options = materiasRaw.map(m => ({ label: m, value: m }));
-    setAsignaturaOptions(options);
-  }, [carrera]);
 
-  // Carga de Inventario
+  const [secciones, setSecciones] = useState({
+    general: true,
+    academico: true,
+    detalles: true
+  });
+
+  const toggleSeccion = (seccion: keyof typeof secciones) => {
+    setSecciones(prev => ({ ...prev, [seccion]: !prev[seccion] }));
+  };
+  
+  useEffect(() => {
+    let materiasParaMostrar: string[] = [];
+    if (carrera === 'Ingeniería Mecatrónica') {
+      if (semestre === 'Todos') {
+        materiasParaMostrar = TODAS_MECATRONICA;
+      } else {
+        materiasParaMostrar = ASIGNATURAS_MECATRONICA[semestre] || [];
+      }
+    } else {
+      materiasParaMostrar = []; 
+    }
+    const options = materiasParaMostrar.map(m => ({ label: m, value: m }));
+    setAsignaturaOptions(options);
+  }, [carrera, semestre]);
+
   useEffect(() => {
     const fetchInventario = async () => {
       try {
@@ -136,7 +158,6 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         if (Array.isArray(data)) {
            setProductosApi(data);
            const options = data.map((item) => ({ label: item.nombre_equipo, value: item.nombre_equipo }));
-           setEquipoOptions(options); 
            setMaterialOptions(options);
         }
       } catch (error) { console.error("Error al cargar inventario:", error); }
@@ -144,7 +165,6 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     fetchInventario();
   }, [apiUrl]);
 
-  // Carga de Datos en Edición
   useEffect(() => {
     if (isEditing && practicaId) {
       const fetchPracticaData = async () => {
@@ -160,27 +180,31 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
           setHoraInicio(data.hora_inicio);
           setHoraFin(data.hora_fin);
           setCarrera(data.carrera);
-          // Normalizar asignatura: puede venir como string o como array de strings
+          setSemestre('Todos'); 
+          
           {
             const raw = data.asignatura;
-            const asignaturaArray: string[] = Array.isArray(raw)
-              ? raw
-              : (typeof raw === 'string' && raw.trim() !== '')
-                ? raw.split(',').map(s => s.trim()).filter(Boolean)
-                : [];
-            setAsignatura(asignaturaArray.map((e: string) => ({ label: e, value: e })));
+            let asigStr = '';
+            if (Array.isArray(raw)) {
+              asigStr = raw.length > 0 ? raw[0] : '';
+            } else if (typeof raw === 'string' && raw.trim() !== '') {
+              asigStr = raw.split(',')[0].trim();
+            }
+            setAsignatura(asigStr ? { label: asigStr, value: asigStr } : null);
           }
+
           setGrupo(data.grupo);
           setNoAlumnos(data.no_alumnos);
           setNombrePractica(data.nombre_practica);
           setObjetivo(data.objetivo);
           setObservaciones(data.observaciones);
           
-          setSelectedEquipos(data.equipos.map(e => ({ label: e, value: e })));
-          setSelectedMateriales(data.materiales.map(m => ({ label: m, value: m })));
+          if (data.equipos && data.equipos.length > 0) {
+            setEquipoRequerido(data.equipos[0]);
+          }
           
+          setSelectedMateriales(data.materiales.map(m => ({ label: m, value: m })));
           setSolicitudUuidExistente(data.solicitud_uuid);
-          setSeccionAbierta('general');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Error al cargar datos');
           onPracticaSaved(); 
@@ -192,14 +216,18 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     }
   }, [practicaId, isEditing, apiUrl, onPracticaSaved]);
 
-  // Handlers
   const handleProfesorBlur = async () => {
-    if (isEditing) return; 
     if (!nombreProfesor.trim()) return;
-    const nombreMayus = nombreProfesor.toUpperCase();
-    setNombreProfesor(nombreMayus);
+    const nombreFormateado = formatTitleCase(nombreProfesor);
+    setNombreProfesor(nombreFormateado);
+
+    if (nombreFormateado && fechaPractica && horaInicio && horaFin) {
+      setSecciones(s => ({ ...s, general: false }));
+    }
+
+    if (isEditing) return; 
     try {
-      const res = await fetch(`${apiUrl}/api/profesor/${encodeURIComponent(nombreMayus)}/ultima-practica`);
+      const res = await fetch(`${apiUrl}/api/profesor/${encodeURIComponent(nombreFormateado)}/ultima-practica`);
       if (res.ok) {
         const data = await res.json();
         setNoPractica((data.ultimo_no_practica || 0) + 1);
@@ -208,13 +236,16 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     } catch (error) { console.error(error); }
   };
 
-  // --- CORRECCIÓN 3: Limpiar asignaturas al cambiar carrera ---
   const handleCarreraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCarrera(e.target.value); 
-    setAsignatura([]); // Se reinicia como array vacío
+    setAsignatura(null); 
+    setSemestre('Todos'); 
   };
-  
-  const handleNext = (next: Seccion) => setSeccionAbierta(next);
+
+  const handleSemestreChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSemestre(e.target.value);
+    setAsignatura(null); 
+  };
   
   const handleAlumnosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -223,42 +254,56 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
     if (isNaN(num)) return;
     setNoAlumnos(Math.max(1, Math.min(30, num)));
   };
+
   const handleAlumnosBlur = () => {
-    if (isNaN(parseInt(String(noAlumnos))) || Number(noAlumnos) < 1) setNoAlumnos(1);
+    let num = parseInt(String(noAlumnos));
+    if (isNaN(num) || num < 1) {
+      num = 1;
+      setNoAlumnos(1);
+    }
+    if (carrera && asignatura && num >= 1) {
+      setSecciones(s => ({ ...s, academico: false }));
+    }
   };
 
-  // --- SUBMIT ---
+  const handleNombrePracticaBlur = () => {
+    if (!nombrePractica.trim()) return;
+    const nombreFormateado = formatTitleCase(nombrePractica);
+    setNombrePractica(nombreFormateado);
+
+    if (nombreFormateado && equipoRequerido) {
+      setSecciones(s => ({ ...s, detalles: false }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombreProfesor || !fechaPractica || !horaInicio || !horaFin || !asignatura || !nombrePractica) {
+    
+    if (!nombreProfesor || !fechaPractica || !horaInicio || !horaFin || !asignatura || !nombrePractica || !equipoRequerido) {
       toast.error("Completa todos los campos obligatorios."); return;
-    }
-    if (selectedEquipos.length === 0 && selectedMateriales.length === 0) {
-      toast.error("Debes añadir al menos un Equipo o un Material."); 
-      setSeccionAbierta('detalles'); return;
     }
 
     setLoading(true);
     const grupoFinal = grupo.trim() === '' ? '0A' : grupo.trim().toUpperCase();
     const materialesArray = selectedMateriales.map(option => option.value);
-    const equiposArray = selectedEquipos.map(option => option.value);
-    // Convertir asignatura (MultiValue) a string o array según espera tu backend
-    // NOTA: Si tu backend espera un array de strings para asignatura, usa asignatura.map(a => a.value)
-    // Si espera un string único, toma el primero o únelos. Asumo array de strings aquí:
-    const asignaturasArray = asignatura.map(a => a.value);
+    const equiposArray = [equipoRequerido]; 
+    const asignaturaString = asignatura.value;
+
+    const nombreProfesorFinal = formatTitleCase(nombreProfesor.trim());
+    const nombrePracticaFinal = formatTitleCase(nombrePractica.trim());
+    const objetivoFinal = objetivo.trim();
+    const observacionesFinal = observaciones.trim();
 
     let finalSolicitudUuid: string | null = null;
     const promesasDePrestamo: Promise<Response>[] = [];
 
     try {
-      // 1. Determinar UUID
       if (isEditing) {
         finalSolicitudUuid = solicitudUuidExistente; 
       } else if (materialesArray.length > 0) {
         finalSolicitudUuid = crypto.randomUUID(); 
       }
 
-      // 2. Crear Préstamos (SOLO SI ES NUEVO REGISTRO)
       if (!isEditing && materialesArray.length > 0) {
         for (const nombreMaterial of materialesArray) {
           const producto = productosApi.find(p => p.nombre_equipo === nombreMaterial);
@@ -269,13 +314,13 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               producto_id: producto.id,
-              nombre_persona: nombreProfesor.toUpperCase().trim(),
+              nombre_persona: nombreProfesorFinal,
               numero_de_control: null,
               integrantes: 1, cantidad: 1, 
-              materia: asignaturasArray, // Ojo aquí con lo que espera tu API
+              materia: asignaturaString, 
               grupo: grupoFinal,
               solicitud_uuid: finalSolicitudUuid, 
-              nombre_profesor: nombreProfesor.toUpperCase().trim()
+              nombre_profesor: nombreProfesorFinal
             })
           }));
         }
@@ -283,7 +328,6 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         if (responses.some(res => !res.ok)) throw new Error('Error al crear préstamos.');
       }
       
-      // 3. Crear/Modificar Práctica
       const method = isEditing ? 'PUT' : 'POST';
       const url = isEditing ? `${apiUrl}/api/practicas/${practicaId}` : `${apiUrl}/api/practicas`;
 
@@ -291,16 +335,18 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         method, 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({
-          nombre_profesor: nombreProfesor.toUpperCase().trim(), 
+          nombre_profesor: nombreProfesorFinal, 
           fecha_practica: fechaPractica, hora_inicio: horaInicio, hora_fin: horaFin,
           carrera: carrera, 
-          asignatura: asignaturasArray, // Enviamos el array de valores
+          asignatura: asignaturaString, 
           grupo: grupoFinal,
           no_practica: noPractica, no_alumnos: Number(noAlumnos),
-          nombre_practica: nombrePractica.trim(), 
-          objetivo: objetivo.trim(), observaciones: observaciones.trim(),
-          equipo_requerido: equiposArray, material_utilizado: materialesArray,
-          solicitud_uuid: finalSolicitudUuid
+          nombre_practica: nombrePracticaFinal, 
+          objetivo: objetivoFinal, observaciones: observacionesFinal,
+          equipo_requerido: equiposArray,
+          material_utilizado: materialesArray,
+          solicitud_uuid: finalSolicitudUuid,
+          semestre: semestre === 'Todos' ? null : semestre
         }) 
       });
 
@@ -309,7 +355,6 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       
       toast.success(isEditing ? '¡Modificación guardada!' : `¡Práctica #${noPractica} registrada!`);
       
-      // --- ACTUALIZACIÓN CLAVE ---
       if (isEditing && responseData.uuid) {
         setSolicitudUuidExistente(responseData.uuid);
       }
@@ -318,13 +363,18 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
         onPracticaSaved(); 
       } else {
         setNombrePractica(''); setObjetivo(''); setObservaciones(''); 
-        setSelectedEquipos([]); setSelectedMateriales([]); 
+        setEquipoRequerido(''); 
+        setSelectedMateriales([]); 
         setNoPractica(prev => prev + 1);
         setFechaPractica(getTodayDate());
         setHoraInicio(getRoundedTime());
         setHoraFin(getRoundedTimePlusTwo());
-        setAsignatura([]); setGrupo(''); setNoAlumnos(1);
-        setSeccionAbierta('general');
+        setAsignatura(null); 
+        setGrupo(''); setNoAlumnos(1);
+        setSemestre('Todos');
+        setSecciones({ general: true, academico: true, detalles: true });
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
     } catch (error) {
@@ -340,24 +390,30 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       borderColor: state.isFocused ? 'rgba(0, 170, 255, 0.18)' : 'rgba(255, 255, 255, 0.16)',
       boxShadow: state.isFocused ? '0 6px 20px rgba(0, 170, 255, 0.06)' : 'none',
       color: '#eee',
-      padding: '5px 6px',
+      padding: '2px 6px',
       borderRadius: '8px',
-      minHeight: '48px',
+      minHeight: '48px', 
+      fontSize: '16px', 
       '&:hover': { borderColor: 'rgba(0, 170, 255, 0.18)' },
     }),
     menu: (base: any) => ({
       ...base, backgroundColor: '#1e222d',
       border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.14))',
       color: '#eee', borderRadius: '8px', overflow: 'hidden',
+      zIndex: 9999, 
     }),
     option: (base: any, state: any) => ({
-      ...base, backgroundColor: state.isFocused ? 'rgba(0, 123, 255, 0.2)' : 'transparent', color: '#eee',
+      ...base, 
+      backgroundColor: state.isFocused ? 'rgba(0, 123, 255, 0.2)' : 'transparent', 
+      color: '#eee',
+      padding: '12px', 
+      fontSize: '16px',
     }),
     multiValue: (base: any) => ({ ...base, backgroundColor: '#004a7c' }),
-    multiValueLabel: (base: any) => ({ ...base, color: '#fff' }),
-    input: (base: any) => ({ ...base, color: '#eee' }),
-    placeholder: (base: any) => ({ ...base, color: '#888' }),
-    singleValue: (base: any) => ({ ...base, color: '#eee' }),
+    multiValueLabel: (base: any) => ({ ...base, color: '#fff', fontSize: '14px' }),
+    input: (base: any) => ({ ...base, color: '#eee', fontSize: '16px' }),
+    placeholder: (base: any) => ({ ...base, color: '#888', fontSize: '16px' }),
+    singleValue: (base: any) => ({ ...base, color: '#eee', fontSize: '16px' }),
   };
 
   return (
@@ -371,11 +427,11 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
       <form onSubmit={handleSubmit} className={styles.formularioPrestamo}>
         
         <div className={styles.accordionItem}>
-          <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('general')}>
+          <h3 className={styles.accordionHeader} onClick={() => toggleSeccion('general')} style={{ padding: '15px', cursor: 'pointer' }}>
             1. Datos Generales
-            <span style={{ transform: seccionAbierta === 'general' ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+            <span style={{ transform: secciones.general ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </h3>
-          <div className={`${styles.accordionContent} ${seccionAbierta === 'general' ? styles.open : ''}`}>
+          <div className={`${styles.accordionContent} ${secciones.general ? styles.open : ''}`}>
             <fieldset>
               <div className={`${styles.formRow} ${styles.cols1}`}> 
                 <div className={styles.formGroup}>
@@ -397,28 +453,45 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                   <input id="horaFin" type="time" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} required />
                 </div>
               </div>
-              <button type="button" className={styles.nextBtn} onClick={() => handleNext('academico')}>Siguiente ▼</button>
             </fieldset>
           </div>
         </div>
 
         <div className={styles.accordionItem}>
-          <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('academico')}>
+          <h3 className={styles.accordionHeader} onClick={() => toggleSeccion('academico')} style={{ padding: '15px', cursor: 'pointer' }}>
             2. Datos Académicos
-            <span style={{ transform: seccionAbierta === 'academico' ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+            <span style={{ transform: secciones.academico ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </h3>
-          <div className={`${styles.accordionContent} ${seccionAbierta === 'academico' ? styles.open : ''}`}>
+          <div className={`${styles.accordionContent} ${secciones.academico ? styles.open : ''}`}>
             <fieldset>
               <div className={`${styles.formRow} ${styles.cols2}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="carrera">Carrera:</label>
-                  <select id="carrera" value={carrera} onChange={handleCarreraChange} required disabled={isEditing}> {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)} </select>
+                  <select id="carrera" value={carrera} onChange={handleCarreraChange} required disabled={isEditing}> 
+                    {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)} 
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
+                  <label htmlFor="semestre">Semestre:</label>
+                  <select id="semestre" value={semestre} onChange={handleSemestreChange} disabled={carrera !== 'Ingeniería Mecatrónica'}>
+                    <option value="Todos">Mostrar Todas</option>
+                    <option value="1">1° Semestre</option>
+                    <option value="2">2° Semestre</option>
+                    <option value="3">3° Semestre</option>
+                    <option value="4">4° Semestre</option>
+                    <option value="5">5° Semestre</option>
+                    <option value="6">6° Semestre</option>
+                    <option value="7">7° Semestre</option>
+                    <option value="8">8° Semestre</option>
+                    <option value="9">9° Semestre</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className={`${styles.formRow} ${styles.cols1}`}>
+                <div className={styles.formGroup}>
                   <label htmlFor="asignatura">Asignatura:</label>
-                  {/* --- CORRECCIÓN 4: Usamos asignaturaOptions en lugar de 'asignatura' para las opciones --- */}
                   <CreatableSelect 
-                    isMulti 
                     options={asignaturaOptions} 
                     value={asignatura} 
                     onChange={(newValue) => setAsignatura(newValue)} 
@@ -428,6 +501,7 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                   />
                 </div>
               </div>
+
               <div className={`${styles.formRow} ${styles.cols2}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="grupo">Grupo:</label>
@@ -438,27 +512,36 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                   <input id="noAlumnos" type="number" value={noAlumnos} onChange={handleAlumnosChange} onBlur={handleAlumnosBlur} min="1" max="30" inputMode="numeric" pattern="[0-9]*" required disabled={isEditing} />
                 </div>
               </div>
-              <button type="button" className={styles.nextBtn} onClick={() => handleNext('detalles')}>Siguiente ▼</button>
             </fieldset>
           </div>
         </div>
 
         <div className={styles.accordionItem}>
-          <h3 className={styles.accordionHeader} onClick={() => setSeccionAbierta('detalles')}>
+          <h3 className={styles.accordionHeader} onClick={() => toggleSeccion('detalles')} style={{ padding: '15px', cursor: 'pointer' }}>
             3. Equipos, Materiales y Objetivos
-            <span style={{ transform: seccionAbierta === 'detalles' ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+            <span style={{ transform: secciones.detalles ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </h3>
-          <div className={`${styles.accordionContent} ${seccionAbierta === 'detalles' ? styles.open : ''}`}>
+          <div className={`${styles.accordionContent} ${secciones.detalles ? styles.open : ''}`}>
             <fieldset>
               <div className={`${styles.formRow} ${styles.cols1}`}>
                 <div className={styles.formGroup}>
                   <label htmlFor="nombrePractica">Nombre de la Práctica:</label>
-                  <input id="nombrePractica" type="text" value={nombrePractica} onChange={(e) => setNombrePractica(e.target.value)} placeholder="Actividad a realizar..." required />
+                  <input id="nombrePractica" type="text" value={nombrePractica} onChange={(e) => setNombrePractica(e.target.value)} onBlur={handleNombrePracticaBlur} placeholder="Actividad a realizar..." required />
                 </div>
+                
                 <div className={styles.formGroup}>
-                  <label>Equipo Requerido:</label>
-                  <CreatableSelect isMulti options={equipoOptions} value={selectedEquipos} onChange={(newValue) => setSelectedEquipos(newValue)} placeholder="Salon o área de uso..." formatCreateLabel={(inputValue) => `Crear nuevo: "${inputValue}"`} styles={reactSelectStyles} />
+                  <label htmlFor="equipoRequerido">Salón o Área de Uso:</label>
+                  <select 
+                    id="equipoRequerido" 
+                    value={equipoRequerido} 
+                    onChange={(e) => setEquipoRequerido(e.target.value)} 
+                    required 
+                  >
+                    <option value="" disabled>-- Selecciona un Área --</option>
+                    {AREAS_USO.map(area => <option key={area} value={area}>{area}</option>)}
+                  </select>
                 </div>
+
                 <div className={styles.formGroup}>
                   <label>Material Utilizado (caseta):</label>
                   <CreatableSelect isMulti options={materialOptions} value={selectedMateriales} onChange={(newValue) => setSelectedMateriales(newValue)} placeholder="Material requerido de caseta..." formatCreateLabel={(inputValue) => `Crear nuevo: "${inputValue}"`} styles={reactSelectStyles} />
@@ -472,12 +555,16 @@ function RegistrarPractica({ apiUrl, practicaId, onPracticaSaved }: RegistrarPra
                   <textarea id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={3} placeholder="Añade notas o comentarios adicionales, instalaciones dañadas o equipo faltante..." />
                 </div>
               </div>
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? (isEditing ? 'Modificando...' : 'Registrando...') : (isEditing ? 'Guardar Modificaciones' : 'Registrar Práctica')}
-              </button>
             </fieldset>
           </div>
         </div>
+
+        <div style={{ marginTop: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <button type="submit" className={styles.submitBtn} disabled={loading} style={{ width: '90%', padding: '15px', fontSize: '18px' }}>
+            {loading ? (isEditing ? 'Modificando...' : 'Registrando...') : (isEditing ? 'Guardar Modificaciones' : 'Registrar Práctica')}
+          </button>
+        </div>
+
       </form>
     </div>
   );

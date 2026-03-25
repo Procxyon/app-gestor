@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import styles from './HistorialPracticas.module.css';
 
-// ... (Interfaz de Practica sin cambios) ...
 interface Practica {
   id: number;
   nombre_profesor: string;
@@ -18,9 +17,10 @@ interface Practica {
   nombre_practica: string;
   objetivo: string;
   observaciones: string;
-  equipos: string[];
+  equipos: string[]; 
   materiales: string[];
   solicitud_uuid: string | null;
+  semestre: string | null;
 }
 
 interface HistorialPracticasProps {
@@ -28,23 +28,46 @@ interface HistorialPracticasProps {
   onModificar: (id: number) => void;
 }
 
+const ITEMS_PER_PAGE = 20;
+
+// Esta es la "huella digital" exacta de tu base de datos para exportar/importar
+const EXPECTED_HEADERS = [
+  "ID Registro", "Folio Solicitud (UUID)", "No. Práctica", "Profesor",
+  "Práctica", "Fecha", "Hora Inicio", "Hora Fin", "Carrera", "Semestre",
+  "Asignatura", "Grupo", "No. Alumnos", "Área (Salones/Mesas)", 
+  "Materiales (Inventario)", "Objetivo", "Observaciones"
+];
+
 function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
   const [practicas, setPracticas] = useState<Practica[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroProfesor, setFiltroProfesor] = useState('');
+  
+  const [currentPage, setCurrentPage] = useState(1);
   const menuRefs = useRef<Map<number, HTMLDetailsElement>>(new Map());
+  
+  // Estados y Refs para el Submenú de Gestión
+  const [isMenuGestionOpen, setIsMenuGestionOpen] = useState(false);
+  const menuGestionRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-// --- Cargar Datos (CORREGIDO PARA EVITAR CACHÉ) ---
+  // Cerrar submenú al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuGestionRef.current && !menuGestionRef.current.contains(event.target as Node)) {
+        setIsMenuGestionOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const fetchPracticas = async () => {
     setLoading(true);
     try {
-      // AGREGAMOS ESTAS OPCIONES PARA EVITAR QUE EL NAVEGADOR MUESTRE DATOS VIEJOS
       const res = await fetch(`${apiUrl}/api/practicas`, {
-        cache: 'no-store', // Le dice al navegador: "No guardes esto, pídelo de nuevo siempre"
-        headers: {
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache'
-        }
+        cache: 'no-store',
+        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
       });
       
       if (!res.ok) throw new Error('Error al cargar datos');
@@ -62,33 +85,26 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     fetchPracticas();
   }, [apiUrl]);
 
-  // --- Entregar Material ---
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroProfesor]);
+
   const handleEntregarMateriales = async (uuid: string | null) => {
-    if (!uuid) {
-      toast.error("Esta práctica no tiene un préstamo de material asociado.");
-      return;
-    }
+    if (!uuid) { toast.error("Esta práctica no tiene un préstamo asociado."); return; }
     if (!window.confirm("¿Confirmar la devolución de TODO el material de esta práctica?")) return;
 
     try {
       const res = await fetch(`${apiUrl}/api/solicitud/${uuid}/devolver`, { method: 'PUT' });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.err || data.message || 'Error en el servidor');
-      }
+      if (!res.ok) throw new Error(data.err || data.message || 'Error en el servidor');
       toast.success(data.message || '¡Material devuelto con éxito!');
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error desconocido';
-      toast.error(`No se pudo devolver el material: ${msg}`);
+      toast.error(`No se pudo devolver el material: ${error instanceof Error ? error.message : 'Desconocido'}`);
     }
   };
 
-  // --- Modificar ---
-  const handleModificar = (id: number) => {
-    onModificar(id);
-  };
+  const handleModificar = (id: number) => { onModificar(id); };
 
-  // --- Borrar Uno ---
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Estás seguro de borrar este registro de práctica?')) return;
     try {
@@ -101,105 +117,129 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
     }
   };
   
-  // --- CORRECCIÓN EN HistorialPracticas.tsx ---
-
- const handleDeleteAllPracticas = async () => {
+  const handleDeleteAllPracticas = async () => {
+    setIsMenuGestionOpen(false);
     if (!window.confirm("¿ESTÁS SEGURO DE QUE QUIERES BORRAR TODO EL HISTORIAL DE PRÁCTICAS?")) return;
     if (!window.confirm("¡¡ADVERTENCIA FINAL!! Esta acción es irreversible. ¿Deseas continuar?")) return;
     
     const toastId = toast.loading('Borrando historial...');
-
     try {
-      // --- CAMBIO AQUÍ: USAR LA NUEVA RUTA ---
-      const res = await fetch(`${apiUrl}/api/reset/practicas`, { 
-        method: 'DELETE',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-
-      if (!res.ok) {
-         const errData = await res.json();
-         throw new Error(errData.err || 'Error al borrar historial');
-      }
+      const res = await fetch(`${apiUrl}/api/reset/practicas`, { method: 'DELETE', headers: { 'Cache-Control': 'no-cache' } });
+      if (!res.ok) throw new Error((await res.json()).err || 'Error al borrar historial');
 
       setPracticas([]); 
       toast.success('Historial de prácticas borrado', { id: toastId });
       fetchPracticas(); 
-
     } catch (error) {
-      console.error(error);
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`, { id: toastId });
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Desconocido'}`, { id: toastId });
     }
   };
 
-  // --- Manejo de Menús ---
   const setMenuRef = (id: number, el: HTMLDetailsElement | null) => {
-    if (el) { menuRefs.current.set(id, el); } 
-    else { menuRefs.current.delete(id); }
+    if (el) { menuRefs.current.set(id, el); } else { menuRefs.current.delete(id); }
   };
+
   const handleMenuClick = (id: number) => {
-    menuRefs.current.forEach((el, key) => {
-      if (key !== id && el.open) {
-        el.open = false;
-      }
-    });
+    menuRefs.current.forEach((el, key) => { if (key !== id && el.open) el.open = false; });
   };
   
-// --- Exportar a Excel (COMPLETO CON TODOS LOS DATOS) ---
+  // --- FUNCIÓN 1: EXPORTAR ---
   const handleExport = () => {
+    setIsMenuGestionOpen(false);
     if (practicas.length === 0) { toast.error("No hay datos para exportar."); return; }
     
     const dataToExport = practicas.map(p => ({
-        "ID Registro": p.id,
-        "Folio Solicitud (UUID)": p.solicitud_uuid || 'Sin Material', // Dato técnico vital para cruzar con préstamos
-        "No. Práctica": p.no_practica,
-        "Profesor": p.nombre_profesor,
-        "Práctica": p.nombre_practica,
-        "Fecha": new Date(p.fecha_practica).toLocaleDateString(),
-        "Hora Inicio": p.hora_inicio,
-        "Hora Fin": p.hora_fin || 'N/A',
-        "Carrera": p.carrera,
-        "Asignatura": p.asignatura,
-        "Grupo": p.grupo,
-        "No. Alumnos": p.no_alumnos,
-        "Equipos (Salones/Mesas)": p.equipos.join(', '),
-        "Materiales (Inventario)": p.materiales.join(', '),
-        "Objetivo": p.objetivo,
-        "Observaciones": p.observaciones
+        [EXPECTED_HEADERS[0]]: p.id,
+        [EXPECTED_HEADERS[1]]: p.solicitud_uuid || 'Sin Material',
+        [EXPECTED_HEADERS[2]]: p.no_practica,
+        [EXPECTED_HEADERS[3]]: p.nombre_profesor,
+        [EXPECTED_HEADERS[4]]: p.nombre_practica,
+        [EXPECTED_HEADERS[5]]: new Date(p.fecha_practica).toLocaleDateString(),
+        [EXPECTED_HEADERS[6]]: p.hora_inicio,
+        [EXPECTED_HEADERS[7]]: p.hora_fin || 'N/A',
+        [EXPECTED_HEADERS[8]]: p.carrera,
+        [EXPECTED_HEADERS[9]]: p.semestre ? `${p.semestre}°` : 'N/A',
+        [EXPECTED_HEADERS[10]]: p.asignatura,
+        [EXPECTED_HEADERS[11]]: p.grupo,
+        [EXPECTED_HEADERS[12]]: p.no_alumnos,
+        [EXPECTED_HEADERS[13]]: p.equipos.join(', '), 
+        [EXPECTED_HEADERS[14]]: p.materiales.join(', '),
+        [EXPECTED_HEADERS[15]]: p.objetivo,
+        [EXPECTED_HEADERS[16]]: p.observaciones
     }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
-    // Ajustamos anchos de columna para que se lea bien
     ws['!cols'] = [
-      { wch: 10 }, // ID
-      { wch: 30 }, // UUID
-      { wch: 12 }, // No Practica
-      { wch: 30 }, // Profesor
-      { wch: 30 }, // Nombre Practica
-      { wch: 12 }, // Fecha
-      { wch: 10 }, // Hora I
-      { wch: 10 }, // Hora F
-      { wch: 25 }, // Carrera
-      { wch: 25 }, // Asignatura
-      { wch: 10 }, // Grupo
-      { wch: 12 }, // Alumnos
-      { wch: 40 }, // Equipos
-      { wch: 40 }, // Materiales
-      { wch: 50 }, // Objetivo
-      { wch: 50 }  // Observaciones
+      { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, 
+      { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 },
+      { wch: 10 }, { wch: 12 }, { wch: 40 }, { wch: 40 }, { wch: 50 }, { wch: 50 }
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Historial Completo");
     XLSX.writeFile(wb, `Historial_Practicas_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
   };
+
+  // --- FUNCIÓN 2: IMPORTAR Y VALIDAR CSV/EXCEL ---
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        
+        // Convertimos a array de arrays (header: 1) solo para sacar la fila de títulos
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+
+        if (data.length === 0) {
+          toast.error("El archivo está vacío");
+          return;
+        }
+
+        const headers = data[0] as string[];
+        
+        // Validación estricta: ¿Están todas las columnas y en el orden correcto?
+        const isValid = EXPECTED_HEADERS.every((h, i) => headers[i] === h) && headers.length === EXPECTED_HEADERS.length;
+
+        if (!isValid) {
+          toast.error("ERROR: Las columnas del archivo no coinciden con la BD. Por favor, usa el formato exportado sin borrar títulos.", { duration: 6000 });
+          return;
+        }
+
+        // Si pasa la validación, lo convertimos a JSON tradicional
+        const jsonData = XLSX.utils.sheet_to_json(ws);
+        
+        toast.success("¡Validación exitosa! Columnas correctas.");
+        console.log("Datos listos para enviar al backend a gran escala:", jsonData);
+
+        // TODO: Aquí haríamos el fetch al backend para la importación masiva
+        // const res = await fetch(`${apiUrl}/api/practicas/import`, { method: 'POST', body: JSON.stringify(jsonData) });
+        // ...
+
+      } catch (error) {
+        toast.error("Hubo un error al leer el archivo. Asegúrate que sea un Excel o CSV válido.");
+      }
+      
+      // Limpiamos el input para permitir subir el mismo archivo si se corrige
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsMenuGestionOpen(false);
+    };
+    reader.readAsBinaryString(file);
+  };
   
-  // --- Filtrado ---
   const practicasFiltradas = practicas.filter(p => 
     p.nombre_profesor.toLowerCase().includes(filtroProfesor.toLowerCase())
   );
 
-  if (loading) return <p>Cargando historial...</p>;
+  const totalPages = Math.ceil(practicasFiltradas.length / ITEMS_PER_PAGE) || 1;
+  const currentPracticas = practicasFiltradas.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  if (loading) return <p style={{textAlign: 'center', color: '#fff'}}>Cargando historial...</p>;
 
   return (
     <div className={styles.appContainer}>
@@ -214,11 +254,38 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
           value={filtroProfesor}
           onChange={(e) => setFiltroProfesor(e.target.value)}
         />
-        <div className={styles.buttonGroup}>
-          <button onClick={handleExport} className={styles.exportBtn}>Exportar a Excel</button>
-          <button onClick={handleDeleteAllPracticas} className={styles.deleteAllBtn}>
-            Borrar Historial
+        
+        {/* --- NUEVO SUBMENÚ --- */}
+        <div className={styles.headerMenuContainer} ref={menuGestionRef}>
+          <button 
+            className={styles.headerMenuBtn} 
+            onClick={() => setIsMenuGestionOpen(!isMenuGestionOpen)}
+          >
+            Gestión de Datos {isMenuGestionOpen ? '▲' : '▼'}
           </button>
+          
+          {isMenuGestionOpen && (
+            <div className={styles.headerDropdown}>
+              <button onClick={handleExport}>
+                📥 Exportar a Excel
+              </button>
+              <button onClick={() => fileInputRef.current?.click()}>
+                📤 Cargar Excel/CSV
+              </button>
+              <button onClick={handleDeleteAllPracticas} className={styles.deleteOption}>
+                ⚠️ Borrar Todo el Historial
+              </button>
+            </div>
+          )}
+
+          {/* Input oculto para manejar el archivo */}
+          <input 
+            type="file" 
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleFileUpload} 
+          />
         </div>
       </div>
 
@@ -226,89 +293,108 @@ function HistorialPracticas({ apiUrl, onModificar }: HistorialPracticasProps) {
         <table>
           <thead>
             <tr>
-              {/* COLUMNA ID ELIMINADA VISUALMENTE */}
               <th>Profesor</th>
               <th>Práctica</th>
               <th>Fecha / Hora</th>
               <th>Grupo / Asig.</th>
-              <th>Equipos</th>
-              <th>Materiales</th>
+              <th>Área / Material</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {practicasFiltradas.map((p) => (
-              <tr key={p.id}>
-                {/* CELDA ID ELIMINADA VISUALMENTE */}
-                <td>
-                  <strong>{p.nombre_profesor}</strong><br/>
-                  <small>(No. {p.no_practica})</small>
-                </td>
-                <td title={p.objetivo}>{p.nombre_practica}</td>
-                <td>
-                  {new Date(p.fecha_practica).toLocaleDateString()}<br/>
-                  <small>{p.hora_inicio} - {p.hora_fin || 'N/A'}</small>
-                </td>
-                <td>
-                  {p.asignatura}<br/>
-                  <small>{p.carrera} ({p.grupo})</small>
-                </td>
-                <td>
-                  <details>
-                    <summary>{p.equipos.length} Equipos</summary>
-                    <ul>
-                      {p.equipos.length > 0 ? (
-                        p.equipos.map((e, i) => <li key={i}>{e}</li>)
-                      ) : ( <li>N/A</li> )}
-                    </ul>
-                  </details>
-                </td>
-                <td>
-                  <details>
-                    <summary>{p.materiales.length} Materiales</summary>
-                    <ul>
-                      {p.materiales.length > 0 ? (
-                        p.materiales.map((m, i) => <li key={i}>{m}</li>)
-                      ) : ( <li>N/A</li> )}
-                    </ul>
-                  </details>
-                </td>
-                <td className={styles.actionsCell}>
-                  <details 
-                    className={styles.actionsMenu}
-                    ref={(el) => setMenuRef(p.id, el)}
-                    onClick={() => handleMenuClick(p.id)}
-                  >
-                    <summary className={styles.menuToggle}>☰</summary>
-                    <div className={styles.menuDropdown}>
-                      <button 
-                        className={styles.menuButton}
-                        onClick={() => handleEntregarMateriales(p.solicitud_uuid)}
-                        disabled={!p.solicitud_uuid}
-                        title={!p.solicitud_uuid ? "No hay material de préstamo" : "Devolver material"}
-                      >
-                        Entregar Material
-                      </button>
-                      <button 
-                        className={styles.menuButton}
-                        onClick={() => handleModificar(p.id)}
-                      >
-                        Modificar
-                      </button>
-                      <button 
-                        className={`${styles.menuButton} ${styles.delete}`}
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        Borrar
-                      </button>
-                    </div>
-                  </details>
-                </td>
+            {currentPracticas.length > 0 ? (
+              currentPracticas.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <strong>{p.nombre_profesor}</strong><br/>
+                    <small>(No. {p.no_practica})</small>
+                  </td>
+                  <td title={p.objetivo}>{p.nombre_practica}</td>
+                  <td>
+                    {new Date(p.fecha_practica).toLocaleDateString()}<br/>
+                    <small>{p.hora_inicio} - {p.hora_fin || 'N/A'}</small>
+                  </td>
+                  <td>
+                    {p.asignatura}<br/>
+                    <small>{p.carrera} {p.semestre ? `| ${p.semestre}° Sem` : ''} ({p.grupo})</small>
+                  </td>
+                  
+                  <td>
+                    <details>
+                      <summary>{p.equipos.length} Área(s) | {p.materiales.length} Mat.</summary>
+                      <div className={styles.combinedLists}>
+                        {p.equipos.length > 0 && (
+                          <div className={styles.listSection}>
+                            <span className={styles.listTitle}>Áreas:</span>
+                            <ul>
+                              {p.equipos.map((e, i) => <li key={i}>{e}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {p.materiales.length > 0 && (
+                          <div className={styles.listSection}>
+                            <span className={styles.listTitle}>Materiales:</span>
+                            <ul>
+                              {p.materiales.map((m, i) => <li key={i}>{m}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {p.equipos.length === 0 && p.materiales.length === 0 && (
+                          <span style={{color: '#888'}}>Sin Área/Material registrado</span>
+                        )}
+                      </div>
+                    </details>
+                  </td>
+
+                  <td className={styles.actionsCell}>
+                    <details 
+                      className={styles.actionsMenu}
+                      ref={(el) => setMenuRef(p.id, el)}
+                      onClick={() => handleMenuClick(p.id)}
+                    >
+                      <summary className={styles.menuToggle}>☰</summary>
+                      <div className={styles.menuDropdown}>
+                        <button 
+                          className={styles.menuButton}
+                          onClick={() => handleEntregarMateriales(p.solicitud_uuid)}
+                          disabled={!p.solicitud_uuid}
+                          title={!p.solicitud_uuid ? "No hay material de préstamo" : "Devolver material"}
+                        >
+                          Entregar Material
+                        </button>
+                        <button className={styles.menuButton} onClick={() => handleModificar(p.id)}>
+                          Modificar
+                        </button>
+                        <button className={`${styles.menuButton} ${styles.delete}`} onClick={() => handleDelete(p.id)}>
+                          Borrar
+                        </button>
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} style={{ padding: '30px', color: '#888' }}>No se encontraron prácticas.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
+
+      {practicasFiltradas.length > ITEMS_PER_PAGE && (
+        <div className={styles.pagination}>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className={styles.pageBtn}>
+            ◀ Anterior
+          </button>
+          <span className={styles.pageInfo}>
+            Página {currentPage} de {totalPages}
+          </span>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className={styles.pageBtn}>
+            Siguiente ▶
+          </button>
+        </div>
+      )}
     </div>
   );
 }

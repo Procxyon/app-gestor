@@ -14,8 +14,6 @@
   color: #eee;
 }
 
-/* ... (Todos los estilos de .appContainer header, .accordionItem, .accordionHeader, .accordionContent, fieldset, inputs, etc. se mantienen igual que antes) ... */
-
 /* Cabecera del formulario */
 .appContainer header {
   border: none;
@@ -51,6 +49,9 @@
   font-weight: 600;
   color: #eee;
   border-radius: 8px;
+  /* Previene que el texto se seleccione por accidente al tocar rápido en el celular */
+  user-select: none; 
+  -webkit-tap-highlight-color: transparent;
 }
 .accordionHeader:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -66,7 +67,7 @@
   transition: max-height 0.3s ease-out;
 }
 .accordionContent.open {
-  max-height: 1000px;
+  max-height: 1200px; /* Un poco más amplio por si se apilan muchos campos en móvil */
 }
 
 /* Fieldset (el fondo de los inputs) */
@@ -103,9 +104,10 @@
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.06);
   color: #eee;
-  font-size: 1rem;
+  /* IMPORTANTE: 16px exactos evitan que iOS haga zoom automático al tocar un input */
+  font-size: 16px; 
   box-sizing: border-box;
-  color-scheme: dark; /* Íconos claros */
+  color-scheme: dark; /* Íconos de calendario/reloj claros */
 }
 
 /* Solución Dropdown */
@@ -149,23 +151,6 @@
   margin-bottom: 0;
 }
 
-/* Botón "Siguiente" (Azul) */
-.nextBtn {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  float: right;
-  margin-top: 10px;
-}
-.nextBtn:hover {
-  background-color: #0056b3;
-}
-
-/* --- CAMBIO AQUÍ --- */
 /* Botón "Registrar Práctica" (Estilo Verde y Grande) */
 .submitBtn {
   width: 100%;
@@ -178,7 +163,7 @@
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  margin-top: 20px; /* Margen superior para separarlo */
+  margin-top: 20px; 
 }
 .submitBtn:disabled {
   background-color: #555;
@@ -189,13 +174,49 @@
   background-color: #218838;
 }
 
-/* Responsive (sin cambios) */
+
+/* ========================================================= */
+/* MODO MÓVIL (MEDIA QUERIES PARA CELULARES Y TABLETS)       */
+/* ========================================================= */
+
 @media (max-width: 768px) {
   .appContainer {
     padding: 15px;
+    margin-bottom: 20px; /* Espacio extra abajo para que el teclado/navegador no tape el botón final */
   }
+  
+  /* Las columnas pasan a ser de 1 sola para que no se aprieten */
   .formRow.cols2,
   .formRow.cols3 {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .accordionHeader {
+    padding: 15px;
+    font-size: 1.1em; /* Ligeramente más pequeño para evitar saltos de línea feos */
+  }
+
+  /* Reducimos el padding de los paneles internos para ganar espacio en pantalla */
+  .formularioPrestamo fieldset {
+    padding: 15px;
+  }
+
+  /* Los inputs y textareas se hacen un poco más altos para ser más fáciles de tocar */
+  .formularioPrestamo input[type="text"],
+  .formularioPrestamo input[type="number"],
+  .formularioPrestamo input[type="date"],
+  .formularioPrestamo input[type="time"],
+  .formularioPrestamo select,
+  .formularioPrestamo textarea {
+    padding: 14px 12px; 
+  }
+
+  
+  /* Botón final flotante un poco más grande en celular */
+  .submitBtn {
+    padding: 18px;
+    font-size: 18px;
+    border-radius: 8px;
   }
 }
