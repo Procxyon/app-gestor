@@ -1,4 +1,4 @@
-/* --- HistorialPracticas.module.css (TEMA GLASS + SUBMENÚ) --- */
+/* --- HistorialPracticas.module.css (ESTANDARIZADO + MOBILE OPTIMIZADO) --- */
 
 .appContainer {
   width: 100%;
@@ -13,209 +13,234 @@
   padding: 25px 40px;
   box-sizing: border-box;
   color: #eee;
+  
+  /* Aceleración por hardware para escritorio */
   transform: translateZ(0);
   will-change: transform, backdrop-filter;
 }
 
-.appContainer header { border: none; padding: 0; margin: 0; }
-.appContainer header h2 { margin: 0 0 25px 0; color: #fff; font-weight: 300; font-size: 1.8em; }
-
-/* --- CONTROLES --- */
-.controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
+.appContainer header {
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  padding-bottom: 20px;
   margin-bottom: 20px;
+}
+.appContainer header h2 {
+  margin: 0;
+  color: #fff;
+  font-weight: 300;
+  font-size: 1.8em;
+}
+
+/* --- FILA DE CONTROLES PRINCIPALES (BARRA ÚNICA) --- */
+.controlsRow {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 15px;
   width: 100%;
 }
-.controls input[type="text"] {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+
+/* 1. Grupo Integrado: Buscador + Ícono de Filtro */
+.searchAndFilterWrapper {
+  position: relative;
+  flex-grow: 1;
+  max-width: 600px;
+}
+
+.searchInputGroup {
+  display: flex;
+  align-items: center;
   background: rgba(255, 255, 255, 0.06);
-  color: #eee;       
-  font-size: 16px;
-  min-width: 250px; 
-  flex-grow: 1;     
-  max-width: 500px; 
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 4px 4px 4px 14px;
   transition: all 0.3s ease;
 }
-.controls input[type="text"]::placeholder { color: #888; }
-.controls input[type="text"]:focus {
-  outline: none;
+.searchInputGroup:focus-within {
   box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
   border-color: rgba(0, 170, 255, 0.18);
 }
 
-/* --- NUEVO: SUBMENÚ DE GESTIÓN DE DATOS --- */
-.headerMenuContainer {
-  position: relative;
-  display: inline-block;
+.searchInputGroup input {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  color: #eee;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
 }
+.searchInputGroup input::placeholder { color: #888; }
 
-.headerMenuBtn {
-  background-color: rgba(0, 170, 255, 0.8);
-  color: white;
-  border: 1px solid rgba(0, 170, 255, 0.5);
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.9em;
+/* Ícono de Filtro Integrado */
+.filterIconBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #eee;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: 10px;
 }
-.headerMenuBtn:hover {
-  background-color: #00aaff;
-  box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
+.filterIconBtn:hover {
+  background: rgba(0, 170, 255, 0.2);
+  color: #00aaff;
 }
 
-.headerDropdown {
+/* 2. Botón de Opciones (En la esquina derecha) */
+.optionsWrapper {
+  position: relative;
+}
+
+.optionsIconBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #eee;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.optionsIconBtn:hover {
+  background: rgba(0, 170, 255, 0.2);
+  color: #00aaff;
+  border-color: rgba(0, 170, 255, 0.5);
+}
+
+/* --- MENÚS DESPLEGABLES GENERALES --- */
+.dropdownMenu {
   position: absolute;
   top: 100%;
-  right: 0;
   margin-top: 10px;
   background: #1e222d;
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  padding: 5px;
+  padding: 10px;
   z-index: 100;
-  width: 220px;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
-  animation: slideDown 0.2s ease-out;
+  animation: slideDownMenu 0.2s ease-out;
 }
+.dropdownLeft { left: 0; }
+.dropdownRight { right: 0; }
 
-@keyframes slideDown {
+@keyframes slideDownMenu {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.headerDropdown button {
+.dropdownTitle {
+  font-size: 0.85em;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  padding: 0 5px;
+}
+.segmentedControlVertical {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.segmentedControlVertical button {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #eee;
-  padding: 12px 15px;
-  text-align: left;
+  padding: 10px 15px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9em;
-  font-weight: 600;
+  text-align: left;
   transition: all 0.2s ease;
 }
-.headerDropdown button:hover {
-  background: rgba(0, 170, 255, 0.2);
-  color: #00aaff;
+.segmentedControlVertical button:hover:not(.segmentedActive) {
+  background: rgba(255, 255, 255, 0.05);
+}
+.segmentedActive {
+  background: rgba(0, 170, 255, 0.15) !important;
+  color: #00aaff !important;
+  font-weight: bold;
+  border: 1px solid rgba(0, 170, 255, 0.3) !important;
 }
 
-.headerDropdown .deleteOption {
-  color: #ff5555;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: 5px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+.optionsList button {
+  background: transparent; border: none; color: #eee; padding: 12px 15px;
+  text-align: left; border-radius: 6px; cursor: pointer; font-size: 0.9em;
+  font-weight: 600; transition: all 0.2s ease; width: 100%;
 }
-.headerDropdown .deleteOption:hover {
-  background: rgba(220, 53, 69, 0.2);
-  color: #ff5555;
+.optionsList button:hover { background: rgba(0, 170, 255, 0.2); color: #00aaff; }
+.optionsList .deleteOption {
+  color: #ff5555; border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 5px; border-top-left-radius: 0; border-top-right-radius: 0;
 }
+.optionsList .deleteOption:hover { background: rgba(220, 53, 69, 0.2); color: #ff5555; }
 
 
-/* --- TABLA OPTIMIZADA --- */
+/* --- TABLA ESCRITORIO --- */
 .tableContainer {
-  width: 100%;
-  overflow-x: auto;
-  min-height: 450px; 
-  padding-bottom: 20px; 
+  width: 100%; overflow-x: auto; min-height: 450px; padding-bottom: 50px; 
 }
-
 .tableContainer table {
-  width: 100%; 
-  border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  table-layout: auto; 
+  width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; table-layout: auto; 
 }
-
-.tableContainer th,
-.tableContainer td {
-  padding: 14px 10px;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  word-wrap: break-word;
-  font-size: 0.95em;
+.tableContainer th, .tableContainer td {
+  padding: 14px 10px; text-align: center; vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); word-wrap: break-word; font-size: 0.95em;
 }
-
 .tableContainer th {
-  background-color: rgba(255, 255, 255, 0.1);
-  font-size: 0.9em;
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #ccc;
-  white-space: nowrap; 
+  background-color: rgba(255, 255, 255, 0.1); font-size: 0.9em; text-transform: uppercase;
+  font-weight: 700; letter-spacing: 0.5px; color: #ccc; white-space: nowrap; 
 }
-
 .tableContainer th:first-child { border-top-left-radius: 8px; }
 .tableContainer th:last-child { border-top-right-radius: 8px; }
 .tableContainer tr:last-child td { border-bottom: none; }
 .tableContainer tr:hover { background-color: rgba(0, 170, 255, 0.08); }
 
-/* --- NUEVA LISTA COMBINADA (ÁREA / MATERIAL) --- */
+
+/* Listas Combinadas en Tabla */
 .tableContainer details summary {
-  cursor: pointer;
-  list-style: none;
-  display: inline-block;
-  font-weight: 600;
-  color: #00aaff;
-  white-space: nowrap; 
+  cursor: pointer; list-style: none; display: inline-block;
+  font-weight: 600; color: #00aaff; white-space: nowrap; 
 }
 .tableContainer details summary::-webkit-details-marker { display: none; }
 .tableContainer details summary::before { content: '► '; font-size: 0.8em; margin-right: 5px; }
 .tableContainer details[open] summary::before { content: '▼ '; }
 
 .combinedLists {
-  text-align: left;
-  margin-top: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: left; margin-top: 10px; background: rgba(0, 0, 0, 0.2);
+  padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .listSection { margin-bottom: 10px; }
 .listSection:last-child { margin-bottom: 0; }
 .listTitle {
-  font-weight: bold;
-  color: #fff;
-  font-size: 0.85em;
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-weight: bold; color: #fff; font-size: 0.85em; text-transform: uppercase;
+  display: block; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);
   padding-bottom: 2px;
 }
-.combinedLists ul {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 0.9em;
-  color: #ccc;
-}
+.combinedLists ul { margin: 0; padding-left: 20px; font-size: 0.9em; color: #ccc; }
 
-/* --- MENÚ DE ACCIONES (Hamburguesa) --- */
+
+/* Menú de Acciones (Hamburguesa) */
 .actionsCell { position: relative; text-align: center; white-space: nowrap; }
 .menuToggle {
   background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
   color: #eee; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;
 }
 .menuToggle:hover { background: rgba(255, 255, 255, 0.2); }
-
 .actionsMenu { position: relative; display: inline-block; }
 .actionsMenu summary { list-style: none; color: #fff; }
 .actionsMenu summary::-webkit-details-marker { display: none; }
@@ -243,29 +268,107 @@
 .menuButton.delete { color: #ff5555; }
 .menuButton.delete:hover { background-color: rgba(220, 53, 69, 0.2); color: #ff5555; }
 
-/* --- PAGINACIÓN --- */
-.pagination {
-  display: flex; justify-content: center; align-items: center; gap: 20px;
-  margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-.pageBtn {
-  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
-}
+
+/* Paginación */
+.pagination { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.pageBtn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s ease; }
 .pageBtn:hover:not(:disabled) { background: rgba(0, 170, 255, 0.2); border-color: rgba(0, 170, 255, 0.5); color: #00aaff; }
 .pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pageInfo { font-weight: 600; color: #ccc; font-size: 1rem; }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 768px) {
-  .appContainer { padding: 15px; }
-  .controls { flex-direction: column; align-items: stretch; }
-  .controls input[type="text"] { min-width: 100%; max-width: 100%; }
-  
-  .headerMenuContainer { width: 100%; }
-  .headerMenuBtn { width: 100%; justify-content: center; }
-  .headerDropdown { width: 100%; }
 
-  .tableContainer table { min-width: 650px; } 
-  .tableContainer th, .tableContainer td { padding: 10px 6px; font-size: 0.85em; }
+/* --- POP-UP DE ADVERTENCIA PARA MÓVILES --- */
+.mobileWarningOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0; /* Asegura cubrir toda la pantalla */
+  background: rgba(10, 14, 23, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #fff; padding: 40px; text-align: center;
+  animation: fadeOutWarning 2.5s ease-in-out forwards;
+  pointer-events: none; 
+}
+.mobileWarningOverlay svg { color: #00aaff; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(0,170,255,0.5)); }
+.mobileWarningOverlay h3 { margin: 0 0 15px 0; font-size: 1.6em; font-weight: 300; }
+.mobileWarningOverlay p { color: #ccc; font-size: 1.05em; line-height: 1.5; }
+
+@keyframes fadeOutWarning {
+  0% { opacity: 0; transform: scale(0.95); }
+  15% { opacity: 1; transform: scale(1); }
+  85% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* ========================================================= */
+/* --- RESPONSIVE MÓVIL EXTREMO: CARDS OPTIMIZADAS --- */
+/* ========================================================= */
+
+@media (max-width: 768px) {
+  .appContainer { 
+    padding: 15px 10px; 
+  }
+  
+  /* --- FILA ÚNICA PARA CONTROLES (Buscador y Engrane) --- */
+  .controlsRow { 
+    flex-direction: row; 
+    flex-wrap: nowrap; 
+    gap: 10px; 
+    align-items: center;
+  }
+  .searchAndFilterWrapper { 
+    flex-grow: 1; 
+    max-width: 100%; 
+  }
+  .optionsWrapper { 
+    width: auto; 
+    flex-shrink: 0; 
+  }
+  .optionsIconBtn { 
+    width: 44px; height: 44px; border-radius: 8px; justify-content: center; 
+  }
+
+  .tableContainer { padding-bottom: 20px; overflow-x: hidden; }
+  .tableContainer table { min-width: 100% !important; width: 100%; }
+  
+  .tableContainer table, .tableContainer thead, .tableContainer tbody, .tableContainer th, .tableContainer td, .tableContainer tr {
+    display: block; width: 100%; box-sizing: border-box; 
+  }
+  .tableContainer thead tr { display: none; }
+  
+  .tableContainer tr {
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.03); padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+  }
+  
+  /* --- ESTANDARIZACIÓN DE TAMAÑOS DE LETRA --- */
+  .tableContainer td {
+    border: none; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative;
+    padding: 12px 0 12px 40%; /* Aumentado para alinear con Préstamos */
+    text-align: right; min-height: 40px;
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+    font-size: 1.05em; /* <-- LETRA GRANDE IGUAL QUE EN MATERIALES */
+  }
+  
+  .tableContainer td::before {
+    content: attr(data-label); position: absolute; left: 0; top: 14px; width: 35%; text-align: left;
+    font-weight: bold; color: #00aaff; text-transform: uppercase; 
+    font-size: 0.85em; /* <-- ETIQUETA GRANDE IGUAL QUE EN MATERIALES */
+    letter-spacing: 0.5px;
+  }
+  
+  .tableContainer details { width: 100%; text-align: right; }
+  .tableContainer ul, .tableContainer .combinedLists { text-align: right; padding-right: 0; }
+  
+  .tableContainer td:last-child { border-bottom: 0; align-items: stretch; padding-left: 0; margin-top: 10px; }
+  .tableContainer td:last-child::before { display: none; }
+  
+  .actionsMenu { width: 100%; }
+  .menuToggle { width: 100%; text-align: center; padding: 12px; font-size: 1.1em; background: rgba(0,170,255,0.1); border-color: rgba(0,170,255,0.3); color: #00aaff; }
+  
+  .menuDropdown {
+    position: relative !important; width: 100% !important; top: 0 !important; right: 0 !important; bottom: auto !important;
+    margin-top: 10px !important; margin-bottom: 0 !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.3) !important; background: rgba(0,0,0,0.2) !important;
+  }
 }
