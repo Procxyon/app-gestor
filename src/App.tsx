@@ -87,8 +87,8 @@ function App() {
         setVista('practica')
         break;
       case 'historiales':
-        // Accesible para Ayudante y Admin
-        setVista('historial-practicas')
+        // --- CAMBIO APLICADO AQUÍ: El default ahora es 'prestamos' (Material) ---
+        setVista('prestamos')
         break;
       case 'gestion':
         // Lógica inteligente: Si es Ayudante, NO puede ver inventario, va a Métricas
@@ -279,11 +279,12 @@ function App() {
                 {/* 2. HISTORIALES (Protegido por lógica de visualización del padre) */}
                 {seccionActiva === 'historiales' && usuario && (
                   <>
-                    <button className={`slider-btn ${vista === 'historial-practicas' ? 'active-slide' : ''}`} onClick={() => setVista('historial-practicas')}>
-                      Prácticas
-                    </button>
+                    {/* --- CAMBIO APLICADO AQUÍ: Botón de Préstamos (Material) puesto en primer lugar --- */}
                     <button className={`slider-btn ${vista === 'prestamos' ? 'active-slide' : ''}`} onClick={() => setVista('prestamos')}>
                       Préstamos
+                    </button>
+                    <button className={`slider-btn ${vista === 'historial-practicas' ? 'active-slide' : ''}`} onClick={() => setVista('historial-practicas')}>
+                      Prácticas
                     </button>
                   </>
                 )}

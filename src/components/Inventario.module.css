@@ -1,574 +1,168 @@
 /* --- Inventario.module.css --- */
 
 .appContainer {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  
-  /* --- CAMBIO 1: FONDO MÁS SÓLIDO Y SIN BLUR --- */
-  /* Usamos un color oscuro con transparencia (85% opaco) */
-  background: rgba(30, 34, 45, 0.85); 
-  
-  /* Quitamos el backdrop-filter porque causa lag al hacer scroll sobre él */
-  /* backdrop-filter: blur(10px);  <-- BORRA O COMENTA ESTA LÍNEA */
-  
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); /* Sombra un poco más fuerte */
-  border-radius: 12px;
-  
-  padding: 25px 40px;
-  box-sizing: border-box;
-  color: #eee;
+  width: 100%; max-width: 1400px; margin: 0 auto;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45); border-radius: 12px;
+  padding: 25px 40px; box-sizing: border-box; color: #eee;
+  transform: translateZ(0); will-change: transform, backdrop-filter;
+}
+.appContainer header { border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14)); padding-bottom: 20px; margin-bottom: 20px; }
+.appContainer header h2 { margin: 0; color: #fff; font-weight: 300; font-size: 1.8em; }
+
+/* CONTROLES ESTANDARIZADOS */
+.controlsRow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; width: 100%; }
+.searchAndFilterWrapper { position: relative; flex-grow: 1; max-width: 600px; }
+.searchInputGroup {
+  display: flex; align-items: center; background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; padding: 4px 4px 4px 14px; transition: all 0.3s ease;
+}
+.searchInputGroup:focus-within { box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06); border-color: rgba(0, 170, 255, 0.18); }
+.searchInputGroup input { flex-grow: 1; background: transparent; border: none; color: #eee; font-size: 16px; outline: none; width: 100%; }
+.searchInputGroup input::placeholder { color: #888; }
+.filterIconBtn {
+  background: rgba(255, 255, 255, 0.1); border: none; color: #eee; width: 38px; height: 38px;
+  border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease; margin-left: 10px;
+}
+.filterIconBtn:hover { background: rgba(0, 170, 255, 0.2); color: #00aaff; }
+
+.optionsWrapper { position: relative; }
+.optionsIconBtn {
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #eee;
+  width: 48px; height: 48px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+}
+.optionsIconBtn:hover { background: rgba(0, 170, 255, 0.2); color: #00aaff; border-color: rgba(0, 170, 255, 0.5); }
+
+/* MENÚS DROPDOWN */
+.dropdownMenu {
+  position: absolute; top: 100%; margin-top: 10px; background: #1e222d;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14)); border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); padding: 10px; z-index: 100;
+  min-width: 250px; display: flex; flex-direction: column; animation: slideDownMenu 0.2s ease-out;
+}
+.dropdownLeft { left: 0; } .dropdownRight { right: 0; }
+@keyframes slideDownMenu { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.dropdownTitle { font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: bold; padding: 0 5px; }
+.segmentedControlVertical { display: flex; flex-direction: column; gap: 5px; }
+.segmentedControlVertical button {
+  background: transparent; border: 1px solid transparent; color: #eee; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9em; text-align: left; transition: all 0.2s ease;
+}
+.segmentedControlVertical button:hover:not(.segmentedActive) { background: rgba(255, 255, 255, 0.05); }
+.segmentedActive { background: rgba(0, 170, 255, 0.15) !important; color: #00aaff !important; font-weight: bold; border: 1px solid rgba(0, 170, 255, 0.3) !important; }
+.optionsList button { background: transparent; border: none; color: #eee; padding: 12px 15px; text-align: left; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 600; transition: all 0.2s ease; width: 100%; }
+.optionsList button:hover { background: rgba(0, 170, 255, 0.2); color: #00aaff; }
+.optionsList button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* EDICIÓN Y GUARDADO */
+.saveActions { background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+.saveBtn { background: linear-gradient(90deg, #007bff, #005fb8); border: none; color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9em; }
+.saveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cancelBtn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #eee; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9em; }
+.editingRow { background-color: rgba(0, 170, 255, 0.1) !important; }
+.editingRow input[type="text"], .editingRow input[type="number"], .inlineSelect {
+  width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(0, 170, 255, 0.18);
+  background: rgba(0,0,0, 0.3); color: #eee; font-size: 1em; box-sizing: border-box;
 }
 
-/* Cabecera */
-.appContainer header {
-  border: none;
-  padding: 0;
-  margin: 0;
+/* --- SOLUCIÓN AL FONDO BLANCO DEL SELECT --- */
+.inlineSelect { 
+  max-width: 140px; cursor: pointer; 
+  background-color: #1e222d !important;
+  color: #fff !important;
 }
-.appContainer header h2 {
-  margin: 0 0 10px 0;
-  color: #fff;
-  font-weight: 600;
-  font-size: 1.8em;
+.inlineSelect option {
+  background-color: #1e222d !important;
+  color: #fff !important;
 }
-.appContainer header p {
-  margin: 0 0 25px 0;
-  color: #ccc;
-  font-size: 0.9em;
-}
+.inlineSelect:focus, .editingRow input:focus { outline: none; box-shadow: 0 6px 20px rgba(0, 170, 255, 0.1); border-color: #00aaff;}
 
-/* --- NUEVOS ESTILOS DE CONTROLES (Buscador + Botones) --- */
-.controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  justify-content: space-between; /* Separa buscador a la izq y botones a la der */
-  margin-bottom: 20px;
-  flex-wrap: wrap; /* Para pantallas pequeñas */
-}
+/* TABLA ESCRITORIO */
+.tableContainer { width: 100%; overflow-x: auto; padding-bottom: 50px; }
+.tableContainer table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; }
+.tableContainer th, .tableContainer td { padding: 14px 10px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.95em; }
+.tableContainer th { background-color: rgba(255, 255, 255, 0.1); font-size: 0.9em; text-transform: uppercase; font-weight: 700; color: #ccc; }
+.tableContainer tr:hover { background-color: rgba(255, 255, 255, 0.08); }
 
-/* Estilo del Input de Búsqueda */
-.controls input[type="text"] {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #f0f0f0; /* Fondo claro */
-  color: #333;       /* Texto oscuro */
-  font-size: 1rem;
-  min-width: 300px;
-  flex-grow: 1; 
-  max-width: 500px;
+/* --- MATERIALES NO LINKEADOS --- */
+.ghostRow {
+  background-color: rgba(255, 85, 85, 0.08) !important;
+  border-left: 4px solid #ff5555 !important;
 }
-.controls input[type="text"]::placeholder {
-  color: #666;
+.ghostRow:hover { background-color: rgba(255, 85, 85, 0.15) !important; }
+.ghostBadge {
+  background: rgba(255, 85, 85, 0.2); color: #ffaaaa;
+  border: 1px solid rgba(255, 85, 85, 0.4); padding: 4px 8px;
+  border-radius: 12px; font-size: 0.85em; font-weight: bold;
 }
-.controls input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-}
+.ghostIcon { font-size: 0.9em; vertical-align: middle; margin-left: 5px; color: #ff5555; font-weight: bold; }
 
-/* Botones de Importar/Exportar (dentro de controls) */
-.importExportActions {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
+/* BADGES Y ESTADOS */
+.alertaPrestamo { color: #ffaa77; font-weight: bold; text-shadow: 0 0 5px rgba(255, 170, 119, 0.3); }
+.badgeDisponible { font-weight: bold; color: #aaffaa; }
+.badgeDisponible.agotado { color: #888; font-weight: normal; }
+.badgeDisponible.negativo { color: #ff5555; font-weight: 800; background: rgba(255, 85, 85, 0.1); padding: 2px 6px; border-radius: 4px; }
+.catBadge { font-size: 0.85em; padding: 4px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+.tipoBadge { border: none; padding: 6px 12px; border-radius: 12px; font-size: 0.75em; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; min-width: 80px; }
+.tipoEquipo { background-color: rgba(0, 170, 255, 0.2); color: #00aaff; border: 1px solid rgba(0, 170, 255, 0.4); }
+.tipoMaterial { background-color: rgba(255, 170, 119, 0.15); color: #ffaa77; border: 1px solid rgba(255, 170, 119, 0.4); }
 
-.exportBtn,
-.importBtn {
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #ccc;
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.9em;
-  cursor: pointer;
-  white-space: nowrap;
+/* POP-UP MÓVIL */
+.mobileWarningOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.95);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 99999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #fff; padding: 40px; text-align: center; animation: fadeOutWarning 2.5s ease-in-out forwards; pointer-events: none; 
 }
-.importBtn {
-  background-color: #28a745;
-  border-color: #28a745;
-  color: white;
-}
-.exportBtn:hover { background-color: #e0e0e0; }
-.importBtn:hover { background-color: #218838; }
-.importBtn.disabled,
-.exportBtn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.mobileWarningOverlay svg { color: #00aaff; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(0,170,255,0.5)); }
+.mobileWarningOverlay h3 { margin: 0 0 15px 0; font-size: 1.6em; font-weight: 300; }
+.mobileWarningOverlay p { color: #ccc; font-size: 1.05em; line-height: 1.5; }
+@keyframes fadeOutWarning { 0% { opacity: 0; transform: scale(0.95); } 15% { opacity: 1; transform: scale(1); } 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; visibility: hidden; } }
 
-/* --- Botones Guardar/Cancelar (Panel separado) --- */
-.saveActions {
-  background: rgba(0, 170, 255, 0.1);
-  border: 1px solid rgba(0, 170, 255, 0.2);
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-.saveBtn {
-  background: linear-gradient(90deg, #007bff, #005fb8);
-  border: none;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 0.9em;
-  box-shadow: 0 8px 22px rgba(0, 123, 255, 0.18);
-}
-.saveBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0, 123, 255, 0.22);
-}
-.cancelBtn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #eee;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 0.9em;
-}
-.cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Contenedor de la Tabla */
-.tableContainer {
-  width: 100%;
-  overflow-x: auto;
-}
-.tableContainer tbody tr {
-  /* --- CAMBIO 2: OPTIMIZACIÓN DE RENDERIZADO --- */
-  /* Esto ayuda a la GPU a manejar el movimiento */
-  will-change: transform, opacity;
-  
-  /* Esto evita que el navegador calcule filas que están fuera de la pantalla */
-  content-visibility: auto; 
-  
-  /* Le damos una altura estimada a la fila para que el scroll no salte (ajusta según tu diseño) */
-  contain-intrinsic-size: 50px; 
-}
-.tableContainer table {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-}
-.tableContainer th:first-child { border-top-left-radius: 8px; }
-.tableContainer th:last-child { border-top-right-radius: 8px; }
-
-.tableContainer th,
-.tableContainer td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-.tableContainer th {
-  background-color: rgba(255, 255, 255, 0.1);
-  font-size: 0.9em;
-  text-transform: uppercase;
-}
-.tableContainer tr:last-child td {
-  border-bottom: none;
-}
-.tableContainer tr:hover {
-  /* Hacemos el hover más ligero (sin blur ni efectos locos) */
-  background-color: rgba(255, 255, 255, 0.08);
-}
-/* Fila en modo Edición */
-.editingRow {
-  background-color: rgba(0, 170, 255, 0.1) !important;
-}
-.editingRow input[type="text"],
-.editingRow input[type="number"] {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 170, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #eee;
-  font-size: 1em;
-  box-sizing: border-box;
-}
-.editingRow input:focus {
-  outline: none;
-  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.06);
-}
-
-/* Columna de Diferencia */
-.diferencia.negativa {
-  color: #ffaaaa;
-  font-weight: bold;
-}
-.diferencia.positiva {
-  color: #aaffaa;
-}
-
-/* Celda de Visibilidad */
-.visibilityCell {
-  text-align: center;
-}
-.statusBadge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: bold;
-  font-size: 0.8em;
-}
-.statusBadge.visible {
-  background: rgba(40, 167, 69, 0.2);
-  color: #aaffaa;
-}
-.statusBadge.oculto {
-  background: rgba(255, 255, 255, 0.1);
-  color: #999;
-}
-
-.toggleVisibilityBtn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #eee;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-.toggleVisibilityBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Responsive */
+/* ========================================================= */
+/* RESPONSIVE MÓVIL: CARDS OPTIMIZADAS */
+/* ========================================================= */
 @media (max-width: 768px) {
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .controls input[type="text"] {
-    max-width: 100%;
-    min-width: auto;
-  }
-  .importExportActions {
-    justify-content: space-between;
-  }
-}
-/* --- AGREGAR AL FINAL DE Inventario.module.css --- */
+  .appContainer { padding: 15px 10px; }
+  .controlsRow { flex-direction: row; flex-wrap: nowrap; gap: 10px; align-items: center; }
+  .searchAndFilterWrapper { flex-grow: 1; max-width: 100%; }
+  .optionsWrapper { width: auto; flex-shrink: 0; }
+  .optionsIconBtn { width: 44px; height: 44px; border-radius: 8px; justify-content: center; }
 
-/* Alerta de items en préstamo */
-.alertaPrestamo {
-    color: #ff4d4d; /* Rojo brillante */
-    font-weight: bold;
-    font-size: 1.1em;
-    text-shadow: 0 0 5px rgba(255, 77, 77, 0.3);
+  .tableContainer { padding-bottom: 20px; overflow-x: hidden; }
+  .tableContainer table { min-width: 100% !important; width: 100%; }
+  .tableContainer table, .tableContainer thead, .tableContainer tbody, .tableContainer th, .tableContainer td, .tableContainer tr { display: block; width: 100%; box-sizing: border-box; }
+  .tableContainer thead tr { display: none; }
+  
+  .tableContainer tr { border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+  .tableContainer td { border: none; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; padding: 12px 0 12px 35%; text-align: right; min-height: 40px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; font-size: 1.05em; }
+  .tableContainer td::before { content: attr(data-label); position: absolute; left: 0; top: 14px; width: 30%; text-align: left; font-weight: bold; color: #00aaff; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+  
+  .editingRow input, .inlineSelect { width: 100% !important; text-align: right !important; }
 }
 
-/* Badge de Disponibles */
-.badgeDisponible {
-    font-weight: bold;
-    color: #aaffaa;
-}
-.badgeDisponible.agotado {
-    color: #888;
-    font-weight: normal;
-}
-
-/* Botones de Tipo (Equipo vs Material) */
-.tipoBadge {
-    border: none;
-    padding: 6px 12px;
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: bold;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-    min-width: 80px;
-}
-
-.tipoEquipo {
-    background-color: rgba(0, 123, 255, 0.2);
-    color: #66b2ff;
-    border: 1px solid rgba(0, 123, 255, 0.4);
-}
-.tipoEquipo:hover {
-    background-color: rgba(0, 123, 255, 0.4);
-}
-
-.tipoMaterial {
-    background-color: rgba(255, 193, 7, 0.15);
-    color: #ffc107;
-    border: 1px solid rgba(255, 193, 7, 0.4);
-}
-.tipoMaterial:hover {
-    background-color: rgba(255, 193, 7, 0.3);
-}
-
-/* ... estilos previos ... */
-
-.badgeDisponible.negativo {
-    color: #ff4d4d;       /* Mismo rojo que la alerta de préstamos */
-    font-weight: 800;     /* Extra negrita para resaltar el error */
-    background: rgba(255, 77, 77, 0.1); /* Un fondo rojo muy sutil */
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-
-/* --- ESTILOS PARA REALIZAR INVENTARIO (NUEVO) --- */
-
-/* Encabezado del modo inventario */
-.inventarioHeader {
-  display: flex;
-  align-items: center;
-  margin-bottom: 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 15px;
-}
-
-.backBtn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ccc;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-right: 20px;
-  font-size: 0.9em;
-  transition: all 0.2s;
-}
-.backBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: #fff;
-}
-
-/* Panel de Configuración (Selectores) */
-.configPanel {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  gap: 20px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-bottom: 25px;
-}
-
-.formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.formGroup label {
-  font-size: 0.85em;
-  color: #aaa;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.selectInput {
-  padding: 10px 14px;
-  border-radius: 6px;
-  background: #1e222d;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 1rem;
-  min-width: 200px;
-  cursor: pointer;
-}
-.selectInput:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-/* Botón de Acción Principal (Iniciar/Terminar) */
-.actionBtn {
-  padding: 10px 24px;
-  border-radius: 6px;
-  border: none;
-  font-weight: bold;
-  font-size: 0.95em;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.2s;
-  color: white;
-}
-.actionBtn:active { transform: scale(0.98); }
-
-.btnPrimary {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-.btnPrimary:hover { box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4); }
-
-.btnSuccess {
-  background: linear-gradient(135deg, #28a745, #218838);
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.btnDanger {
-  background: linear-gradient(135deg, #dc3545, #c82333);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-}
-
-.btnDisabled {
-  background: #444;
-  color: #888;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* Tabla de Conteo */
-.conteoContainer {
-  max-height: 60vh;
-  overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.inputConteo {
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  width: 80px;
-  text-align: center;
-  font-size: 1.1em;
-  transition: all 0.2s;
-}
-.inputConteo:focus {
-  background: #1e222d;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-  outline: none;
-}
-.inputConteo.filled {
-  border-color: #28a745;
-  background: rgba(40, 167, 69, 0.1);
-}
-
-/* Resultados */
-.resultadosBox {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 25px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 20px;
-  text-align: center;
-}
-.resultadosBox h3 { margin-top: 0; color: #fff; }
-
-.diffBadge {
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
+/* ESTILOS DE REALIZAR INVENTARIO */
+.inventarioHeader { display: flex; align-items: center; margin-bottom: 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 15px; }
+.backBtn { background: transparent; border: 1px solid rgba(255, 255, 255, 0.3); color: #ccc; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 20px; font-size: 0.9em; }
+.backBtn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: #fff; }
+.configPanel { background: rgba(0, 0, 0, 0.2); padding: 20px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 25px; }
+.formGroup { display: flex; flex-direction: column; gap: 8px; }
+.formGroup label { font-size: 0.85em; color: #aaa; font-weight: bold; text-transform: uppercase; }
+.selectInput { padding: 10px 14px; border-radius: 6px; background: #1e222d; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; font-size: 1rem; min-width: 200px; cursor: pointer; }
+.actionBtn { padding: 10px 24px; border-radius: 6px; border: none; font-weight: bold; font-size: 0.95em; cursor: pointer; color: white; }
+.btnPrimary { background: linear-gradient(135deg, #007bff, #0056b3); }
+.conteoContainer { max-height: 60vh; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; background: rgba(0, 0, 0, 0.15); }
+.inputConteo { padding: 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); color: #fff; width: 80px; text-align: center; font-size: 1.1em; }
+.inputConteo:focus { background: #1e222d; border-color: #007bff; outline: none; }
+.resultadosBox { background: rgba(255, 255, 255, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 20px; text-align: center; }
+.diffBadge { font-weight: bold; padding: 4px 8px; border-radius: 4px; }
 .diffPos { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
 .diffNeg { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); }
-
-.successMessage {
-  text-align: center;
-  padding: 40px;
-  color: #4ade80;
-}
-.successMessage h2 { font-size: 2em; margin-bottom: 10px; }
-
-/* --- BARRA DE PROGRESO --- */
-.progressWrapper {
-  margin-top: 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
-  height: 28px; /* Altura de la barra */
-}
-
-.progressBar {
-  height: 100%;
-  background: linear-gradient(90deg, #007bff, #00d4ff); /* Azul por defecto */
-  border-radius: 8px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
-  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Efecto de brillo animado sobre la barra */
-.progressBar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.2) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: translateX(-100%);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
-
-/* Estado completado (Verde) */
-.progressBar.completed {
-  background: linear-gradient(90deg, #28a745, #5dd879);
-  box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
-}
-
-/* Texto del porcentaje (centrado sobre la barra) */
-.progressText {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.85em;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  z-index: 2;
-  white-space: nowrap;
-}
-
-/* --- BUSCADOR INTERNO (REALIZAR INVENTARIO) --- */
-.searchBarInternal {
-  width: 100%;
-  padding: 10px 15px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.25); /* Un poco más oscuro para diferenciar */
-  color: #fff;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.searchBarInternal:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
-
-.searchBarInternal::placeholder {
-  color: #888;
-}
+.progressWrapper { margin-top: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 4px; border: 1px solid rgba(255, 255, 255, 0.1); position: relative; height: 28px; }
+.progressBar { height: 100%; background: linear-gradient(90deg, #007bff, #00d4ff); border-radius: 8px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+.progressBar.completed { background: linear-gradient(90deg, #28a745, #5dd879); }
+.progressText { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.85em; font-weight: bold; color: #fff; z-index: 2; }
+.searchBarInternal { width: 100%; padding: 10px 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.25); color: #fff; font-size: 1rem; }
